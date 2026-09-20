@@ -2,6 +2,5 @@ node_modules/
 dist/
 antigravity-brain/
 .env
-.env.example
 oauth_credentials.json
 .claude/
