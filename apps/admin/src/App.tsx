@@ -1,24 +1,29 @@
-import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
-import Login from './pages/Login';
 import DashboardLayout from './layouts/DashboardLayout';
-import MenuManager from './pages/MenuManager';
-import Settings from './pages/Settings';
-import POS from './pages/POS';
+import Login from './pages/Login';
 import LiveOrders from './pages/LiveOrders';
+import MenuManager from './pages/MenuManager';
+import Billing from './pages/Billing';
+import Orders from './pages/Orders';
+import DeliveryPartners from './pages/DeliveryPartners';
+import DeliveryPartnerDetails from './pages/DeliveryPartnerDetails';
+import Settings from './pages/Settings';
 
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter basename="/admin">
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route element={<DashboardLayout />}>
-            <Route path="/" element={<LiveOrders />} />
-            <Route path="/menu" element={<MenuManager />} />
-            <Route path="/pos" element={<POS />} />
-            <Route path="/settings" element={<Settings />} />
+          <Route path="/" element={<DashboardLayout />}>
+            <Route index element={<LiveOrders />} />
+            <Route path="menu" element={<MenuManager />} />
+            <Route path="billing" element={<Billing />} />
+            <Route path="orders" element={<Orders />} />
+            <Route path="partners" element={<DeliveryPartners />} />
+            <Route path="partners/:id" element={<DeliveryPartnerDetails />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>
       </BrowserRouter>

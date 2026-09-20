@@ -1,0 +1,3 @@
+ALTER TABLE orders 
+ADD COLUMN picked_up_at TIMESTAMPTZ,
+ADD COLUMN delivered_at TIMESTAMPTZ;

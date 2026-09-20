@@ -1,0 +1,89 @@
+import { createContext, useContext, useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
+import type { User } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
+
+interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  isPartner: boolean;
+  signInWithGoogle: () => Promise<void>;
+  signOut: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isPartner, setIsPartner] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      checkPartnerStatus(session?.user?.id);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      checkPartnerStatus(session?.user?.id);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  async function checkPartnerStatus(userId?: string) {
+    if (!userId) {
+      setIsPartner(false);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('delivery_partners')
+        .select('name, phone_number')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error checking partner status:', error);
+      }
+
+      setIsPartner(!!(data && data.name && data.phone_number));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function signInWithGoogle() {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+  }
+
+  async function signOut() {
+    await supabase.auth.signOut();
+  }
+
+  return (
+    <AuthContext.Provider value={{ user, loading, isPartner, signInWithGoogle, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}

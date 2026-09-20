@@ -1,46 +1,65 @@
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-// Setup type definitions for built-in Supabase Runtime APIs
-import "@supabase/functions-js/edge-runtime.d.ts";
-import { withSupabase } from "@supabase/server";
-
-console.log("Hello from Functions!");
-
-// This endpoint uses 'publishable' | 'secret' access, apiKey is required.
-// Use publishable for Client-facing, key-validated endpoints
-// Use secret for Server-to-server, internal calls
-export default {
-  fetch: withSupabase({ auth: ["publishable", "secret"] }, async (req, ctx) => {
-    // Called by another service with a secret key
-    // ctx.supabaseAdmin bypasses RLS — use for privileged operations
-    /*
-    if (ctx.authMode === "secret") {
-      const { user_id } = await req.json();
-      const { data } = await ctx.supabaseAdmin.auth.admin.getUserById(user_id);
-
-      return Response.json({
-        email: data?.user?.email,
-      });
-    }
-    */
-
-    const { name } = await req.json();
-
-    return Response.json({
-      message: `Hello ${name}!`,
-    });
-  }),
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-/* To invoke locally:
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
 
-  1. Run `supabase start` (see: https://supabase.com/docs/reference/cli/supabase-start)
-  2. Make an HTTP request:
+  try {
+    const { items_subtotal, distance_km } = await req.json()
 
-  curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/calculate-delivery-fee' \
-    --header 'apiKey: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH' \
-    --data '{"name":"Functions"}'
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
-*/
+    const { data: config, error } = await supabaseAdmin
+      .from('pricing_config')
+      .select('*')
+      .single();
+
+    if (error || !config) {
+      throw new Error('Could not fetch pricing configuration');
+    }
+
+    let baseDelivery = config.base_delivery_fee + (distance_km * config.per_km_rate);
+    
+    // Check free delivery threshold
+    if (config.free_delivery_threshold > 0 && items_subtotal >= config.free_delivery_threshold) {
+      baseDelivery = 0;
+    }
+
+    // Calculate hidden platform fee
+    let platformFee = 0;
+    if (config.platform_fee_type === 'percentage') {
+      platformFee = items_subtotal * (config.platform_fee_value / 100);
+    } else {
+      platformFee = config.platform_fee_value;
+    }
+
+    // Combine them as requested by user (hidden from customer)
+    const totalDeliveryCharge = baseDelivery + platformFee;
+
+    return new Response(JSON.stringify({
+      total_delivery_charge: Number(totalDeliveryCharge.toFixed(2)),
+      breakdown_internal: {
+        base_delivery: Number(baseDelivery.toFixed(2)),
+        platform_fee: Number(platformFee.toFixed(2))
+      }
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    })
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    })
+  }
+})

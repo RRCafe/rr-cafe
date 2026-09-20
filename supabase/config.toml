@@ -415,7 +415,7 @@ enabled = true
 
 [functions.create-razorpay-order]
 enabled = true
-verify_jwt = false
+verify_jwt = true
 import_map = "./functions/create-razorpay-order/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
@@ -426,7 +426,7 @@ entrypoint = "./functions/create-razorpay-order/index.ts"
 
 [functions.verify-razorpay-payment]
 enabled = true
-verify_jwt = false
+verify_jwt = true
 import_map = "./functions/verify-razorpay-payment/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
@@ -437,7 +437,7 @@ entrypoint = "./functions/verify-razorpay-payment/index.ts"
 
 [functions.calculate-delivery-fee]
 enabled = true
-verify_jwt = false
+verify_jwt = true
 import_map = "./functions/calculate-delivery-fee/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx

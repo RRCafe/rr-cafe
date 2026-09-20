@@ -7,13 +7,20 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cap:sync": "npm run build && cap sync"
   },
   "dependencies": {
     "@capacitor/core": "^8.5.0",
+    "@supabase/supabase-js": "^2.112.3",
+    "@vis.gl/react-google-maps": "^1.10.0",
+    "@zip.js/zip.js": "^2.8.52",
     "lucide-react": "^1.31.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "react-hot-toast": "^2.6.0",
+    "react-router-dom": "^7.18.2",
+    "xmldsigjs": "^2.8.8"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.0",
