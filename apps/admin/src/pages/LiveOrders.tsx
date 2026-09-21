@@ -78,12 +78,12 @@ export default function LiveOrders() {
 
   const OrderCard = ({ order }: { order: Order }) => (
     <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-4">
-      <div className="flex justify-between items-center mb-3">
-        <span className="font-bold text-lg">{getShortOrderId(order.id)}</span>
-        <span className="text-sm text-gray-500">
-          {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </span>
-      </div>
+        <div className="flex justify-between items-center mb-3">
+          <span className="font-bold text-lg text-gray-800">{order.order_number || getShortOrderId(order.id)}</span>
+          <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
+            {new Date(order.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })}
+          </span>
+        </div>
       
       <div className="flex flex-wrap gap-2 mb-4">
         <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full capitalize">
@@ -175,55 +175,58 @@ export default function LiveOrders() {
   );
 
   return (
-    <div className="p-6 h-full flex flex-col">
-      <div className="mb-6 flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Live Orders</h2>
+    <div className="p-4 md:p-6 h-full flex flex-col">
+      <div className="mb-4 md:mb-6 flex justify-between items-center shrink-0">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-800">Live Orders</h2>
       </div>
 
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 overflow-hidden">
+      {/* Kanban Board Container */}
+      <div className="flex-1 flex overflow-x-auto md:grid md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 md:overflow-hidden snap-x snap-mandatory pb-4 md:pb-0 hide-scrollbar">
+        
         {/* New Orders */}
-        <div className="flex flex-col h-full bg-gray-50 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-4 text-blue-700 font-semibold">
+        <div className="flex flex-col h-full bg-gray-50 rounded-xl p-4 min-w-[85vw] md:min-w-0 snap-center">
+          <div className="flex items-center gap-2 mb-4 text-blue-700 font-semibold shrink-0">
             <Package className="w-5 h-5" />
             <h3>New ({newOrders.length})</h3>
           </div>
-          <div className="flex-1 overflow-y-auto pr-2">
+          <div className="flex-1 overflow-y-auto pr-1">
             {newOrders.map(order => <OrderCard key={order.id} order={order} />)}
           </div>
         </div>
 
-        {/* Preparing */}
-        <div className="flex flex-col h-full bg-gray-50 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-4 text-yellow-600 font-semibold">
+        {/* Preparing Orders */}
+        <div className="flex flex-col h-full bg-orange-50 rounded-xl p-4 min-w-[85vw] md:min-w-0 snap-center">
+          <div className="flex items-center gap-2 mb-4 text-orange-700 font-semibold shrink-0">
             <ChefHat className="w-5 h-5" />
             <h3>Preparing ({preparingOrders.length})</h3>
           </div>
-          <div className="flex-1 overflow-y-auto pr-2">
+          <div className="flex-1 overflow-y-auto pr-1">
             {preparingOrders.map(order => <OrderCard key={order.id} order={order} />)}
           </div>
         </div>
 
-        {/* Ready */}
-        <div className="flex flex-col h-full bg-gray-50 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-4 text-green-600 font-semibold">
+        {/* Ready Orders */}
+        <div className="flex flex-col h-full bg-green-50 rounded-xl p-4 min-w-[85vw] md:min-w-0 snap-center">
+          <div className="flex items-center gap-2 mb-4 text-green-700 font-semibold shrink-0">
             <CheckCircle className="w-5 h-5" />
             <h3>Ready ({readyOrders.length})</h3>
           </div>
-          <div className="flex-1 overflow-y-auto pr-2">
+          <div className="flex-1 overflow-y-auto pr-1">
             {readyOrders.map(order => <OrderCard key={order.id} order={order} />)}
           </div>
         </div>
 
-        {/* Out for Delivery */}
-        <div className="flex flex-col h-full bg-gray-50 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-4 text-purple-600 font-semibold">
+        {/* Out for Delivery Orders */}
+        <div className="flex flex-col h-full bg-purple-50 rounded-xl p-4 min-w-[85vw] md:min-w-0 snap-center">
+          <div className="flex items-center gap-2 mb-4 text-purple-700 font-semibold shrink-0">
             <Truck className="w-5 h-5" />
             <h3>Out for Delivery ({outForDeliveryOrders.length})</h3>
           </div>
-          <div className="flex-1 overflow-y-auto pr-2">
+          <div className="flex-1 overflow-y-auto pr-1">
             {outForDeliveryOrders.map(order => <OrderCard key={order.id} order={order} />)}
           </div>
         </div>
+
       </div>
     </div>
   );

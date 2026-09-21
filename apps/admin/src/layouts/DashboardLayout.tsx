@@ -84,7 +84,7 @@ export default function DashboardLayout() {
       </main>
 
       {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 w-full bg-white border-t border-gray-200 flex items-center justify-around z-50 h-16 px-2 safe-area-bottom">
+      <nav className="md:hidden fixed bottom-0 w-full bg-white border-t border-gray-200 flex items-center justify-around z-40 h-16 px-2 safe-area-bottom">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
@@ -92,12 +92,11 @@ export default function DashboardLayout() {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${
+              className={`flex flex-col items-center justify-center w-full h-full ${
                 isActive ? 'text-blue-600' : 'text-gray-500'
               }`}
             >
-              <Icon className="w-5 h-5" />
-              <span className="text-[10px] font-medium truncate w-full text-center">{item.name}</span>
+              <Icon className={`w-6 h-6 ${isActive ? 'fill-blue-50' : ''}`} />
             </Link>
           );
         })}
