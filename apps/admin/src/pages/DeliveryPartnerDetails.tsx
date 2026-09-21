@@ -125,24 +125,38 @@ export default function DeliveryPartnerDetails() {
               </div>
             </div>
 
+            
             {/* Grid Details */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-gray-100">
               <div className="bg-white p-4">
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1"><Bike className="w-3 h-3" /> Vehicle</p>
-                <p className="text-sm font-bold text-gray-900">{partner.vehicle_name || 'N/A'}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{partner.vehicle_number || 'No Plate'}</p>
+                <p className="text-sm font-bold text-gray-900">${partner.vehicle_name || 'N/A'}</p>
+                <p className="text-xs text-gray-500 mt-0.5">${partner.vehicle_number || 'No Plate'}</p>
               </div>
               <div className="bg-white p-4">
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1"><Key className="w-3 h-3" /> License</p>
-                <p className="text-sm font-bold text-gray-900 truncate">{partner.license_number || 'N/A'}</p>
+                <p className="text-sm font-bold text-gray-900 break-words">${partner.license_number || 'N/A'}</p>
               </div>
               <div className="bg-white p-4">
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1"><Calendar className="w-3 h-3" /> DOB</p>
-                <p className="text-sm font-bold text-gray-900">{partner.dob || 'N/A'}</p>
+                <p className="text-sm font-bold text-gray-900">${partner.dob || 'N/A'}</p>
               </div>
               <div className="bg-white p-4">
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1"><Map className="w-3 h-3" /> Location</p>
-                <p className="text-sm font-bold text-gray-900 truncate">{partner.address || 'N/A'}</p>
+                <p className="text-sm font-bold text-gray-900 break-words">${partner.address || 'N/A'}</p>
+              </div>
+              <div className="bg-white p-4">
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1">Gender</p>
+                <p className="text-sm font-bold text-gray-900 capitalize">${partner.gender || 'N/A'}</p>
+              </div>
+              <div className="bg-white p-4">
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1">Govt ID</p>
+                <p className="text-sm font-bold text-gray-900">${partner.aadhar_number || partner.govt_id_number || 'N/A'}</p>
+              </div>
+              <div className="bg-white p-4 col-span-2">
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1">Bank Details</p>
+                <p className="text-sm font-bold text-gray-900">${partner.bank_account_number ? 'A/C: ' + partner.bank_account_number : 'N/A'}</p>
+                ${partner.ifsc_code && <p className="text-xs text-gray-500 mt-0.5">IFSC: ${partner.ifsc_code}</p>}
               </div>
             </div>
 
@@ -182,7 +196,7 @@ export default function DeliveryPartnerDetails() {
             ) : (
               <div className="space-y-3 w-full">
                 {orders.map(order => (
-                  <div key={order.id} className="border border-gray-100 rounded-2xl p-4 bg-gray-50/50 hover:bg-white hover:shadow-sm transition-all w-full flex flex-col sm:flex-row justify-between gap-3 sm:gap-4">
+                  <Link to={`/?order_id=\${order.id}`} key={order.id} className="block border border-gray-100 rounded-2xl p-4 bg-gray-50/50 hover:bg-white hover:shadow-sm transition-all w-full flex flex-col sm:flex-row justify-between gap-3 sm:gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="font-bold text-gray-900 text-sm truncate">Order #{order.order_number || order.id.split('-')[0].toUpperCase()}</span>
@@ -205,8 +219,7 @@ export default function DeliveryPartnerDetails() {
                     <div className="flex flex-row sm:flex-col justify-between sm:justify-center items-center sm:items-end border-t sm:border-t-0 sm:border-l border-gray-200 pt-3 sm:pt-0 sm:pl-4 shrink-0 gap-1">
                       <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Commission</span>
                       <span className="font-black text-green-600 text-lg">â‚¹{order.partner_commission || 0}</span>
-                    </div>
-                  </div>
+                          </Link>
                 ))}
               </div>
             )}

@@ -146,12 +146,12 @@ export default function Billing() {
   return (
     <div className="flex flex-col h-[calc(100vh-theme(spacing.16))] md:h-screen p-4 md:p-6 bg-gray-50/50">
       <div className="flex justify-between items-center mb-4 md:mb-6 shrink-0">
-        <h2 className="text-xl md:text-2xl font-bold text-gray-800 tracking-tight">New Order</h2>
+        <h2 className="text-xl md:text-2xl font-bold text-gray-800 tracking-tight">Billing</h2>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-4 md:gap-6 h-full min-h-0">
         {/* Left Side - Search & Cart List */}
-        <div className="flex-1 flex flex-col min-h-0 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0 bg-white rounded-2xl shadow-sm border border-gray-100">
           
           {/* Item Search Bar */}
           <div className="p-3 md:p-4 border-b border-gray-100 bg-white z-50 shrink-0" ref={searchRef}>
@@ -376,10 +376,10 @@ export default function Billing() {
           </div>
 
           {/* Grand Total & Checkout Card */}
-          <div className="bg-gray-900 text-white rounded-2xl shadow-xl p-6 mt-auto">
+          <div className="bg-white text-gray-900 border border-gray-100 rounded-2xl shadow-xl p-6 mt-auto">
             <div className="flex justify-between items-end mb-6">
               <div>
-                <p className="text-gray-400 font-medium text-sm mb-1">Grand Total ({totalItems} items)</p>
+                <p className="text-gray-500 font-medium text-sm mb-1">Grand Total ({totalItems} items)</p>
                 <div className="text-4xl font-black tracking-tight">₹{total}</div>
               </div>
             </div>
@@ -400,7 +400,7 @@ export default function Billing() {
               ) : (
                 <>
                   <Check className="w-6 h-6" />
-                  {cart.length === 0 ? 'Add Items to Bill' : 'Complete Order'}
+                  {cart.length === 0 ? 'Add Items to Bill' : 'Checkout'}
                 </>
               )}
             </button>

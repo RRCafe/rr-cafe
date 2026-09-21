@@ -63,8 +63,8 @@ export default function DeliveryPartners() {
   return (
     <div className="flex flex-col h-full bg-gray-50/50 p-4 md:p-6 pb-24 md:pb-6">
       
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 shrink-0 bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-gray-100">
-        <h1 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">Delivery Partners</h1>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 shrink-0 bg-transparent">
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex-1"><h1 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">Delivery Partners</h1></div>
         <button
           onClick={() => setShowMapModal(true)}
           className="flex items-center justify-center gap-2 px-5 py-3 md:py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold transition-all active:scale-95 shadow-sm shadow-red-500/30"
@@ -96,7 +96,7 @@ export default function DeliveryPartners() {
                   </div>
                 </div>
 
-                <div className="px-4 md:px-5 py-3 bg-gray-50/50 border-y border-gray-100 grid grid-cols-2 gap-4">
+                <div className="px-4 md:px-5 py-3 bg-white border-y border-gray-100 grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-0.5">Status</p>
                     <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider ${

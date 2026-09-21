@@ -15,7 +15,7 @@ interface MenuItem {
   image_url: string | null;
 }
 
-const BUSINESS_TYPES = ['cafe', 'restaurant', 'bakery', 'sweets'];
+const BUSINESS_TYPES = ['cafe', 'ice cream'];
 
 export default function MenuManager() {
   const [items, setItems] = useState<MenuItem[]>([]);
