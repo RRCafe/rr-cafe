@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { APIProvider, Map, AdvancedMarker,  } from '@vis.gl/react-google-maps';
-import { Bike, User, X, Phone, ShieldBan, ExternalLink } from 'lucide-react';
+import { UtensilsCrossed, Bike, User, X, Phone, ShieldBan, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface DeliveryPartner {
@@ -64,7 +64,12 @@ export default function DeliveryPartners() {
     <div className="flex flex-col h-full bg-gray-50/50 p-4 md:p-6 pb-24 md:pb-6">
       
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 shrink-0 bg-transparent">
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex-1"><h1 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">Delivery Partners</h1></div>
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex-1"><div className="flex items-center gap-2.5">
+          <div className="md:hidden w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm shadow-blue-500/30 shrink-0">
+            <UtensilsCrossed className="w-5 h-5 text-white" />
+          </div>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">Delivery Partners</h1>
+        </div></div>
         <button
           onClick={() => setShowMapModal(true)}
           className="flex items-center justify-center gap-2 px-5 py-3 md:py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold transition-all active:scale-95 shadow-sm shadow-red-500/30"

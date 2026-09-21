@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, Trash2, X, Image as ImageIcon, Pencil, Check, Search, ChevronDown } from 'lucide-react';
+import { UtensilsCrossed, Plus, Trash2, X, Image as ImageIcon, Pencil, Check, Search, ChevronDown } from 'lucide-react';
 import { ConfirmModal } from '../components/ConfirmModal';
 
 let cached_items: any = null;
@@ -153,7 +153,12 @@ export default function MenuManager() {
   return (
     <div className="flex flex-col h-full bg-gray-50/50 p-4 md:p-6 pb-24 md:pb-6">
       <div className="flex justify-between items-center mb-6 shrink-0">
-        <h2 className="text-xl md:text-2xl font-bold text-gray-800 tracking-tight">Menu Manager</h2>
+        <div className="flex items-center gap-2.5">
+          <div className="md:hidden w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm shadow-blue-500/30 shrink-0">
+            <UtensilsCrossed className="w-5 h-5 text-white" />
+          </div>
+          <h2 className="text-xl md:text-2xl font-bold text-gray-800 tracking-tight">Menu Manager</h2>
+        </div>
         <button 
           onClick={() => setIsModalOpen(true)}
           className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl font-bold shadow-sm shadow-blue-500/30 hover:bg-blue-500 transition-all active:scale-95 text-sm md:text-base"

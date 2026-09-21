@@ -1,7 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Search, MapPin, X, ExternalLink, Bike, Receipt, ShoppingBag, Truck, Calendar, Phone, Package } from 'lucide-react';
+import { UtensilsCrossed, Search, MapPin, X, ExternalLink, Bike, Receipt, ShoppingBag, Truck, Calendar, Phone, Package } from 'lucide-react';
 import { APIProvider, Map, AdvancedMarker } from '@vis.gl/react-google-maps';
 import { DirectionsRoute } from '../components/DirectionsRoute';
 
@@ -10,7 +10,7 @@ interface Order {
   created_at: string;
   status: string;
   order_type: string;
-  total_amount: number;
+  grand_total: number;
   partner_commission: number;
   owner_platform_fee: number;
   source: string;
@@ -112,7 +112,7 @@ export default function Orders() {
     const { data, error } = await supabase
       .from('orders')
       .select(`
-        id, created_at, status, order_type, total_amount, partner_commission, owner_platform_fee, source, delivery_address, delivery_lat, delivery_lng, delivery_partner_id, picked_up_at, delivered_at, order_number,
+        id, created_at, status, order_type, grand_total, partner_commission, owner_platform_fee, source, delivery_address, delivery_lat, delivery_lng, delivery_partner_id, picked_up_at, delivered_at, order_number,
         customer(name, phone),
         partner:delivery_partners(name, phone_number, current_lat, current_lng),
         payments(razorpay_order_id, razorpay_payment_id, payment_method)
@@ -175,7 +175,12 @@ export default function Orders() {
   return (
     <div className="flex flex-col h-full bg-gray-50/50 p-4 md:p-6 pb-24 md:pb-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 shrink-0">
-        <h2 className="text-xl md:text-2xl font-bold text-gray-800 tracking-tight">Order History</h2>
+        <div className="flex items-center gap-2.5">
+          <div className="md:hidden w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm shadow-blue-500/30 shrink-0">
+            <UtensilsCrossed className="w-5 h-5 text-white" />
+          </div>
+          <h2 className="text-xl md:text-2xl font-bold text-gray-800 tracking-tight">Order History</h2>
+        </div>
         <div className="relative w-full md:w-80">
           <input
             type="text"
@@ -222,7 +227,7 @@ export default function Orders() {
                       {order.customer ? order.customer.name : 'Walk-in Customer'}
                     </span>
                   </div>
-                  <span className="font-black text-gray-900 text-lg">â‚¹{order.total_amount}</span>
+                  <span className="font-black text-gray-900 text-lg">â‚¹{order.grand_total}</span>
                 </div>
               </div>
             ))
@@ -268,7 +273,7 @@ export default function Orders() {
                         {order.status.replace(/_/g, ' ')}
                       </span>
                     </td>
-                    <td className="p-4 text-right font-bold text-gray-900">â‚¹{order.total_amount}</td>
+                    <td className="p-4 text-right font-bold text-gray-900">â‚¹{order.grand_total}</td>
                     <td className="p-4 text-center">
                       <button
                         onClick={() => viewOrderDetails(order)}
@@ -324,7 +329,7 @@ export default function Orders() {
                 <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
                   <BanknoteIcon className="w-6 h-6 text-green-500 mb-2" />
                   <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Total</span>
-                  <span className="text-lg font-black text-gray-900 mt-1 leading-none">â‚¹{selectedOrder.total_amount}</span>
+                  <span className="text-lg font-black text-gray-900 mt-1 leading-none">â‚¹{selectedOrder.grand_total}</span>
                 </div>
                 <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
                   <MonitorSmartphoneIcon className="w-6 h-6 text-orange-500 mb-2" />
@@ -364,7 +369,7 @@ export default function Orders() {
                       <div className="border-t border-dashed border-gray-200 mt-4 pt-4 space-y-2.5">
                         <div className="flex justify-between text-base font-black text-gray-900 pt-2 border-t border-gray-100">
                           <span>Grand Total</span>
-                          <span>â‚¹{selectedOrder.total_amount}</span>
+                          <span>â‚¹{selectedOrder.grand_total}</span>
                         </div>
                       </div>
                     </div>
@@ -461,5 +466,6 @@ export default function Orders() {
 function BanknoteIcon(props: any) { return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>; }
 function MonitorSmartphoneIcon(props: any) { return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h8"/><path d="M10 19v-3.96 3.15"/><path d="M7 19h5"/><rect width="6" height="10" x="16" y="12" rx="2"/></svg>; }
 function UserIcon(props: any) { return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>; }
+
 
 

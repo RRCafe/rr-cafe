@@ -6,3 +6,12 @@ oauth_credentials.json
 .claude/
 .vercel
 .env*
+
+# Temporary scripts
+script*.js
+test*.js
+add_logo.js
+fix_jsx.js
+fix_total.js
+
+fix*.js

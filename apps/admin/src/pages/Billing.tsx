@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, Minus, Check, Receipt, Trash2, Search, ShoppingBag, Banknote, QrCode, Utensils, X } from 'lucide-react';
+import { UtensilsCrossed, Plus, Minus, Check, Receipt, Trash2, Search, ShoppingBag, Banknote, QrCode, Utensils, X } from 'lucide-react';
 import { ConfirmModal } from '../components/ConfirmModal';
 
 interface MenuItem {
@@ -105,7 +105,7 @@ export default function Billing() {
         .insert({
           status: 'delivered',
           order_type: orderType,
-          total_amount: total,
+          grand_total: total,
           business_type: cart[0]?.business_type || 'RR Cafe',
           source: 'pos_manual'
         })
@@ -146,7 +146,12 @@ export default function Billing() {
   return (
     <div className="flex flex-col h-[calc(100vh-theme(spacing.16))] md:h-screen p-4 md:p-6 bg-gray-50/50">
       <div className="flex justify-between items-center mb-4 md:mb-6 shrink-0">
-        <h2 className="text-xl md:text-2xl font-bold text-gray-800 tracking-tight">Billing</h2>
+        <div className="flex items-center gap-2.5">
+          <div className="md:hidden w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm shadow-blue-500/30 shrink-0">
+            <UtensilsCrossed className="w-5 h-5 text-white" />
+          </div>
+          <h2 className="text-xl md:text-2xl font-bold text-gray-800 tracking-tight">Billing</h2>
+        </div>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-4 md:gap-6 h-full min-h-0">

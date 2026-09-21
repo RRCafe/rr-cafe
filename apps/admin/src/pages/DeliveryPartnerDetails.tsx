@@ -1,7 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { ArrowLeft, Clock, CheckCircle, User, Phone, Mail, Calendar, Key, Bike, Map, IndianRupee } from 'lucide-react';
+import { UtensilsCrossed, ArrowLeft, Clock, CheckCircle, User, Phone, Mail, Calendar, Key, Bike, Map, IndianRupee } from 'lucide-react';
 
 export default function DeliveryPartnerDetails() {
   const { id } = useParams<{ id: string }>();
@@ -73,7 +73,12 @@ export default function DeliveryPartnerDetails() {
         <Link to="/partners" className="p-2 hover:bg-gray-100 bg-gray-50 rounded-full transition-all active:scale-95 text-gray-600 shrink-0">
           <ArrowLeft className="w-5 h-5 md:w-6 md:h-6" />
         </Link>
-        <h1 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight truncate">Partner Details</h1>
+        <div className="flex items-center gap-2.5">
+          <div className="md:hidden w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm shadow-blue-500/30 shrink-0">
+            <UtensilsCrossed className="w-5 h-5 text-white" />
+          </div>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight truncate">Partner Details</h1>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto hide-scrollbar w-full overflow-x-hidden">
@@ -101,7 +106,12 @@ export default function DeliveryPartnerDetails() {
               
               <div className="flex-1 text-center sm:text-left min-w-0 w-full">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
-                  <h2 className="text-2xl font-black text-gray-900 truncate">{partner.name || 'Unnamed Partner'}</h2>
+                  <div className="flex items-center gap-2.5">
+          <div className="md:hidden w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm shadow-blue-500/30 shrink-0">
+            <UtensilsCrossed className="w-5 h-5 text-white" />
+          </div>
+          <h2 className="text-2xl font-black text-gray-900 truncate">{partner.name || 'Unnamed Partner'}</h2>
+        </div>
                   <div className={`inline-flex px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider mx-auto sm:mx-0 w-max ${
                     partner.status === 'online' ? 'bg-green-100 text-green-700' :
                     partner.status === 'suspend' ? 'bg-red-100 text-red-700' :
@@ -218,8 +228,7 @@ export default function DeliveryPartnerDetails() {
 
                     <div className="flex flex-row sm:flex-col justify-between sm:justify-center items-center sm:items-end border-t sm:border-t-0 sm:border-l border-gray-200 pt-3 sm:pt-0 sm:pl-4 shrink-0 gap-1">
                       <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Commission</span>
-                      <span className="font-black text-green-600 text-lg">â‚¹{order.partner_commission || 0}</span>
-                          </Link>
+                      <span className="font-black text-green-600 text-lg">₹{order.partner_commission || 0}</span></div></Link>
                 ))}
               </div>
             )}
@@ -230,4 +239,5 @@ export default function DeliveryPartnerDetails() {
     </div>
   );
 }
+
 
