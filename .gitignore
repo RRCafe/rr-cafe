@@ -4,3 +4,5 @@ antigravity-brain/
 .env
 oauth_credentials.json
 .claude/
+.vercel
+.env*
