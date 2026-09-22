@@ -4,14 +4,17 @@ antigravity-brain/
 .env
 oauth_credentials.json
 .claude/
-.vercel
+.vercel/
 .env*
+.agents/
+graphify-out/
+menu/
+offlineaadhaar20260818072853141.zip
 
-# Temporary scripts
-script*.js
-test*.js
-add_logo.js
-fix_jsx.js
-fix_total.js
 
 fix*.js
+test*.js
+patch*.js
+fix*.py
+test*.py
+patch*.py
