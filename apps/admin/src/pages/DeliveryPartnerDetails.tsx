@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { User, ArrowLeft, Clock, CheckCircle, User, Phone, Mail, Calendar, Key, Bike, Map, IndianRupee } from 'lucide-react';
+import { User, ArrowLeft, Clock, CheckCircle, Phone, Mail, Calendar, Key, Bike, Map, IndianRupee } from 'lucide-react';
 
 export default function DeliveryPartnerDetails() {
   const { id } = useParams<{ id: string }>();

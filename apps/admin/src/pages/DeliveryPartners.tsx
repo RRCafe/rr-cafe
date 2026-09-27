@@ -174,7 +174,7 @@ export default function DeliveryPartners() {
                     {partners.filter(p => p.current_lat && p.current_lng).map(partner => (
                       <AdvancedMarker 
                         key={partner.id}
-                        position={{ lat: partner.current_lat!, lng: partner.current_lng! }} 
+                        position={{ lat: partner.current_lat, lng: partner.current_lng }} 
                         title={partner.name}
                       >
                         <div className="flex flex-col items-center cursor-pointer">
@@ -183,6 +183,7 @@ export default function DeliveryPartners() {
                             {partner.name || 'Partner'}
                           </div>
                         </div>
+                      </AdvancedMarker>
                     ))}
                   </Map>
                 </APIProvider>
