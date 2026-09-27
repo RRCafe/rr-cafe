@@ -1,15 +1,23 @@
 {
   "rewrites": [
     {
-      "source": "/admin/:path*",
+      "source": "/admin",
       "destination": "/admin/index.html"
     },
     {
-      "source": "/delivery/:path*",
+      "source": "/admin/:path((?!assets/).*)",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/delivery",
       "destination": "/delivery/index.html"
     },
     {
-      "source": "/:path*",
+      "source": "/delivery/:path((?!assets/).*)",
+      "destination": "/delivery/index.html"
+    },
+    {
+      "source": "/:path((?!assets/).*)",
       "destination": "/index.html"
     }
   ],

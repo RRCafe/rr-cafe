@@ -3,17 +3,21 @@ const fs = require('fs');
 const path = require('path');
 
 const server = http.createServer((req, res) => {
-  // Ignore Vercel CLI's proxy req.url and look at the original URL the browser requested
-  let originalUrl = req.headers['x-forwarded-path'] || req.headers['x-invoke-path'] || req.url;
+  let originalUrl = req.headers['x-now-route-matches'] || req.headers['x-invoke-path'] || req.url;
   
   if (originalUrl.includes('%3F')) originalUrl = originalUrl.replace(/%3F/g, '?');
-  
-  // Clean query strings
   let reqPath = originalUrl.split('?')[0];
   
-  let filePath = path.join(__dirname, 'dist', reqPath);
+  const urlObj = new URL(originalUrl, 'http://localhost');
+  if (urlObj.searchParams.has('path')) {
+    reqPath = '/' + urlObj.searchParams.get('path').replace(/^\/+/, '');
+  }
   
-  // If the file exists directly (e.g. /assets/index.js), serve it!
+  let safePath = reqPath.replace(/^\/+/, '');
+  let filePath = path.join(__dirname, 'dist', safePath);
+  
+  console.log('Final reqPath:', reqPath, 'filePath:', filePath);
+  
   if (fs.existsSync(filePath) && !fs.statSync(filePath).isDirectory()) {
     const ext = path.extname(filePath);
     let contentType = 'text/plain';
@@ -28,7 +32,6 @@ const server = http.createServer((req, res) => {
     return;
   }
   
-  // If we reach here, it's a SPA fallback route (like /admin/billing)
   if (reqPath.startsWith('/admin')) filePath = path.join(__dirname, 'dist/admin/index.html');
   else if (reqPath.startsWith('/delivery')) filePath = path.join(__dirname, 'dist/delivery/index.html');
   else filePath = path.join(__dirname, 'dist/index.html');
