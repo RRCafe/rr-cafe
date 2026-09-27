@@ -16,5 +16,6 @@
   "framework": null,
   "outputDirectory": "dist",
   "buildCommand": "npm run build",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "devCommand": "node serve.js"
 }
