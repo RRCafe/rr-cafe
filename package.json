@@ -7,8 +7,8 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev --workspaces --if-present",
     "build": "npm run build --workspaces --if-present && node prepare-vercel-dist.js",
     "test": "echo \"Error: no test specified\" && exit 1"
-  }
+  },
+  "packageManager": "npm@10.8.2"
 }
