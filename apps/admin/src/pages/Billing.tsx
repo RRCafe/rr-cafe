@@ -105,7 +105,7 @@ export default function Billing() {
         .insert({
           status: 'delivered',
           order_type: orderType,
-          grand_total: total,
+          grand_total: total, items_subtotal: total,
           business_type: cart[0]?.business_type || 'RR Cafe',
           source: 'pos_manual'
         })
@@ -160,7 +160,7 @@ export default function Billing() {
           
           {/* Item Search Bar */}
           <div className="p-3 md:p-4 border-b border-gray-100 bg-white z-50 shrink-0" ref={searchRef}>
-            <div className="relative">
+            <div className="relative mt-2">
               <div className="flex items-center border border-gray-200 rounded-xl bg-gray-50 overflow-hidden focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all">
                 <Search className="w-5 h-5 text-gray-400 ml-4" />
                 <input
@@ -212,7 +212,7 @@ export default function Billing() {
           </div>
 
           {/* Cart Container - Mobile Cards */}
-          <div className="flex-1 overflow-y-auto bg-gray-50/30 p-2 md:hidden hide-scrollbar">
+          <div className="flex-1 min-h-[200px] overflow-y-auto bg-gray-50/30 p-2 md:hidden hide-scrollbar">
             {cart.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-gray-400 p-8">
                 <ShoppingBag className="w-12 h-12 mb-4 opacity-30" />
@@ -255,7 +255,7 @@ export default function Billing() {
           </div>
 
           {/* Cart Container - Desktop Table */}
-          <div className="hidden md:block flex-1 overflow-y-auto">
+          <div className="hidden md:block flex-1 min-h-[200px] overflow-y-auto">
             <table className="w-full text-left border-collapse">
               <thead className="sticky top-0 bg-white/95 backdrop-blur border-b border-gray-100 shadow-sm z-10">
                 <tr>
@@ -298,7 +298,7 @@ export default function Billing() {
                             type="number"
                             value={item.quantity}
                             onChange={(e) => setQuantity(item.id, parseInt(e.target.value) || 0)}
-                            className="w-8 text-center font-bold text-sm bg-transparent outline-none appearance-none"
+                            className="w-8 text-center font-bold text-sm bg-transparent outline-none appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             min="1"
                           />
                           <button onClick={() => updateQuantity(item.id, 1)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-white rounded-lg shadow-sm transition-all">

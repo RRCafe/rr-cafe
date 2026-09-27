@@ -1,6 +1,6 @@
 import { Outlet, Navigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LayoutDashboard, UtensilsCrossed, Receipt, Settings as SettingsIcon, LogOut, History, Users } from 'lucide-react';
+import { LayoutDashboard, UtensilsCrossed, Calculator, Settings as SettingsIcon, LogOut, History, Users } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export default function DashboardLayout() {
@@ -25,7 +25,7 @@ export default function DashboardLayout() {
 
   const navItems = [
     { name: 'Live Orders', path: '/', icon: LayoutDashboard },
-    { name: 'Billing', path: '/billing', icon: Receipt },
+    { name: 'Billing', path: '/billing', icon: Calculator },
     { name: 'Menu Manager', path: '/menu', icon: UtensilsCrossed },
     { name: 'Orders History', path: '/orders', icon: History },
     { name: 'Delivery Partners', path: '/partners', icon: Users },
