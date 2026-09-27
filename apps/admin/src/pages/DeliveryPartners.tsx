@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { APIProvider, Map, AdvancedMarker,  } from '@vis.gl/react-google-maps';
-import { UtensilsCrossed, Bike, User, X, Phone, ShieldBan, ExternalLink } from 'lucide-react';
+import { Truck, Bike, User, X, Phone, ShieldBan, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface DeliveryPartner {
@@ -66,7 +66,7 @@ export default function DeliveryPartners() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 shrink-0 bg-transparent">
         <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex-1"><div className="flex items-center gap-2.5">
           <div className="md:hidden w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm shadow-blue-500/30 shrink-0">
-            <UtensilsCrossed className="w-5 h-5 text-white" />
+            <Truck className="w-5 h-5 text-white" />
           </div>
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">Delivery Partners</h1>
         </div></div>
@@ -177,13 +177,12 @@ export default function DeliveryPartners() {
                         position={{ lat: partner.current_lat!, lng: partner.current_lng! }} 
                         title={partner.name}
                       >
-                        <div className="relative group cursor-pointer">
-                          <Bike className="text-purple-600 bg-white p-1 rounded-full shadow-lg border border-gray-100 w-8 h-8 md:w-10 md:h-10 transition-transform group-hover:scale-110" />
-                          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 bg-gray-900 text-white text-[10px] font-bold px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                        <div className="flex flex-col items-center cursor-pointer">
+                          <Bike className="text-purple-600 bg-white p-1 rounded-full shadow-lg border border-gray-100 w-8 h-8 md:w-10 md:h-10" />
+                          <div className="mt-1 bg-gray-900/90 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm whitespace-nowrap z-50">
                             {partner.name || 'Partner'}
                           </div>
                         </div>
-                      </AdvancedMarker>
                     ))}
                   </Map>
                 </APIProvider>

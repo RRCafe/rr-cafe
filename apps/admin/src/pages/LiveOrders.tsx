@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { requestNotificationPermission, showNotification } from '../lib/notifications';
 import { supabase } from '../lib/supabase';
-import { UtensilsCrossed, ChefHat, CheckCircle, Truck, Package } from 'lucide-react';
+import { Activity, ChefHat, CheckCircle, Truck, Package } from 'lucide-react';
 
 let cached_orders: any = null;
 
@@ -179,7 +179,7 @@ export default function LiveOrders() {
       <div className="mb-4 md:mb-6 flex justify-between items-center shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="md:hidden w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm shadow-blue-500/30 shrink-0">
-            <UtensilsCrossed className="w-5 h-5 text-white" />
+            <Activity className="w-5 h-5 text-white" />
           </div>
           <h2 className="text-xl md:text-2xl font-bold text-gray-800">Live Orders</h2>
         </div>

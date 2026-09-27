@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { UtensilsCrossed, Plus, Minus, Check, Receipt, Trash2, Search, ShoppingBag, Banknote, QrCode, Utensils, X } from 'lucide-react';
+import { Calculator, Plus, Minus, Check, Receipt, Trash2, Search, ShoppingBag, Banknote, QrCode, Utensils, X } from 'lucide-react';
 import { ConfirmModal } from '../components/ConfirmModal';
 
 interface MenuItem {
@@ -144,19 +144,19 @@ export default function Billing() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-theme(spacing.16))] md:h-screen p-4 md:p-6 bg-gray-50/50">
+    <div className="flex flex-col min-h-[calc(100vh-theme(spacing.16))] md:h-screen h-auto p-4 md:p-6 bg-gray-50/50">
       <div className="flex justify-between items-center mb-4 md:mb-6 shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="md:hidden w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm shadow-blue-500/30 shrink-0">
-            <UtensilsCrossed className="w-5 h-5 text-white" />
+            <Calculator className="w-5 h-5 text-white" />
           </div>
           <h2 className="text-xl md:text-2xl font-bold text-gray-800 tracking-tight">Billing</h2>
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-4 md:gap-6 h-full min-h-0">
+      <div className="flex flex-col lg:flex-row gap-4 md:gap-6 flex-1 min-h-0">
         {/* Left Side - Search & Cart List */}
-        <div className="flex-1 flex flex-col min-h-0 bg-white rounded-2xl shadow-sm border border-gray-100">
+        <div className="flex-1 flex flex-col min-h-[400px] md:min-h-0 bg-white rounded-2xl shadow-sm border border-gray-100">
           
           {/* Item Search Bar */}
           <div className="p-3 md:p-4 border-b border-gray-100 bg-white z-50 shrink-0" ref={searchRef}>

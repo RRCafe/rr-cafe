@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { UtensilsCrossed, Search, MapPin, X, ExternalLink, Bike, Receipt, ShoppingBag, Truck, Calendar, Phone, Package } from 'lucide-react';
+import { History, Search, MapPin, X, ExternalLink, Bike, Receipt, ShoppingBag, Truck, Calendar, Phone, Package } from 'lucide-react';
 import { APIProvider, Map, AdvancedMarker } from '@vis.gl/react-google-maps';
 import { DirectionsRoute } from '../components/DirectionsRoute';
 
@@ -178,7 +178,7 @@ export default function Orders() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="md:hidden w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm shadow-blue-500/30 shrink-0">
-            <UtensilsCrossed className="w-5 h-5 text-white" />
+            <History className="w-5 h-5 text-white" />
           </div>
           <h2 className="text-xl md:text-2xl font-bold text-gray-800 tracking-tight">Order History</h2>
         </div>

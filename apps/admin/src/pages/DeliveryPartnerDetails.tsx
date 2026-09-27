@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { UtensilsCrossed, ArrowLeft, Clock, CheckCircle, User, Phone, Mail, Calendar, Key, Bike, Map, IndianRupee } from 'lucide-react';
+import { User, ArrowLeft, Clock, CheckCircle, User, Phone, Mail, Calendar, Key, Bike, Map, IndianRupee } from 'lucide-react';
 
 export default function DeliveryPartnerDetails() {
   const { id } = useParams<{ id: string }>();
@@ -75,7 +75,7 @@ export default function DeliveryPartnerDetails() {
         </Link>
         <div className="flex items-center gap-2.5">
           <div className="md:hidden w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm shadow-blue-500/30 shrink-0">
-            <UtensilsCrossed className="w-5 h-5 text-white" />
+            <User className="w-5 h-5 text-white" />
           </div>
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight truncate">Partner Details</h1>
         </div>
@@ -108,7 +108,7 @@ export default function DeliveryPartnerDetails() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
                   <div className="flex items-center gap-2.5">
           <div className="md:hidden w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm shadow-blue-500/30 shrink-0">
-            <UtensilsCrossed className="w-5 h-5 text-white" />
+            <User className="w-5 h-5 text-white" />
           </div>
           <h2 className="text-2xl font-black text-gray-900 truncate">{partner.name || 'Unnamed Partner'}</h2>
         </div>
@@ -140,33 +140,33 @@ export default function DeliveryPartnerDetails() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-gray-100">
               <div className="bg-white p-4">
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1"><Bike className="w-3 h-3" /> Vehicle</p>
-                <p className="text-sm font-bold text-gray-900">${partner.vehicle_name || 'N/A'}</p>
-                <p className="text-xs text-gray-500 mt-0.5">${partner.vehicle_number || 'No Plate'}</p>
+                <p className="text-sm font-bold text-gray-900">{partner.vehicle_name || 'N/A'}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{partner.vehicle_number || 'No Plate'}</p>
               </div>
               <div className="bg-white p-4">
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1"><Key className="w-3 h-3" /> License</p>
-                <p className="text-sm font-bold text-gray-900 break-words">${partner.license_number || 'N/A'}</p>
+                <p className="text-sm font-bold text-gray-900 break-words">{partner.license_number || 'N/A'}</p>
               </div>
               <div className="bg-white p-4">
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1"><Calendar className="w-3 h-3" /> DOB</p>
-                <p className="text-sm font-bold text-gray-900">${partner.dob || 'N/A'}</p>
+                <p className="text-sm font-bold text-gray-900">{partner.dob || 'N/A'}</p>
               </div>
               <div className="bg-white p-4">
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1"><Map className="w-3 h-3" /> Location</p>
-                <p className="text-sm font-bold text-gray-900 break-words">${partner.address || 'N/A'}</p>
+                <p className="text-sm font-bold text-gray-900 break-words">{partner.address || 'N/A'}</p>
               </div>
               <div className="bg-white p-4">
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1">Gender</p>
-                <p className="text-sm font-bold text-gray-900 capitalize">${partner.gender || 'N/A'}</p>
+                <p className="text-sm font-bold text-gray-900 capitalize">{partner.gender || 'N/A'}</p>
               </div>
               <div className="bg-white p-4">
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1">Govt ID</p>
-                <p className="text-sm font-bold text-gray-900">${partner.aadhar_number || partner.govt_id_number || 'N/A'}</p>
+                <p className="text-sm font-bold text-gray-900">{partner.aadhar_number || partner.govt_id_number || 'N/A'}</p>
               </div>
               <div className="bg-white p-4 col-span-2">
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1">Bank Details</p>
-                <p className="text-sm font-bold text-gray-900">${partner.bank_account_number ? 'A/C: ' + partner.bank_account_number : 'N/A'}</p>
-                ${partner.ifsc_code && <p className="text-xs text-gray-500 mt-0.5">IFSC: ${partner.ifsc_code}</p>}
+                <p className="text-sm font-bold text-gray-900">{partner.bank_account_number ? 'A/C: ' + partner.bank_account_number : 'N/A'}</p>
+                {partner.ifsc_code && <p className="text-xs text-gray-500 mt-0.5">IFSC: {partner.ifsc_code}</p>}
               </div>
             </div>
 
@@ -206,7 +206,7 @@ export default function DeliveryPartnerDetails() {
             ) : (
               <div className="space-y-3 w-full">
                 {orders.map(order => (
-                  <Link to={`/?order_id=\${order.id}`} key={order.id} className="block border border-gray-100 rounded-2xl p-4 bg-gray-50/50 hover:bg-white hover:shadow-sm transition-all w-full flex flex-col sm:flex-row justify-between gap-3 sm:gap-4">
+                  <Link to={`/orders?order_id=${order.id}`} key={order.id} className="block border border-gray-100 rounded-2xl p-4 bg-gray-50/50 hover:bg-white hover:shadow-sm transition-all w-full flex flex-col sm:flex-row justify-between gap-3 sm:gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="font-bold text-gray-900 text-sm truncate">Order #{order.order_number || order.id.split('-')[0].toUpperCase()}</span>
