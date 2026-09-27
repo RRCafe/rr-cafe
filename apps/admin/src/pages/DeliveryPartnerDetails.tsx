@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { UtensilsCrossed, ArrowLeft, Clock, CheckCircle, User, Phone, Mail, Calendar, Key, Bike, Map, IndianRupee } from 'lucide-react';
@@ -178,7 +178,7 @@ export default function DeliveryPartnerDetails() {
               <div className="absolute top-0 right-0 p-4 opacity-20"><IndianRupee className="w-20 h-20" /></div>
               <div className="relative z-10">
                 <p className="text-green-100 font-medium text-sm mb-1 uppercase tracking-wider">Today's Earnings</p>
-                <div className="text-3xl font-black">â‚¹{todayEarnings.toFixed(2)}</div>
+                <div className="text-3xl font-black">₹{todayEarnings.toFixed(2)}</div>
               </div>
             </div>
             

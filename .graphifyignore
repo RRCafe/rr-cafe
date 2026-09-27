@@ -8,6 +8,7 @@ oauth_credentials.json
 .vercel/
 .env*
 .agents/
+.planning/
 menu/
 offlineaadhaar20260818072853141.zip
 

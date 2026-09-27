@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { UtensilsCrossed, Search, MapPin, X, ExternalLink, Bike, Receipt, ShoppingBag, Truck, Calendar, Phone, Package } from 'lucide-react';
@@ -99,7 +99,8 @@ export default function Orders() {
         if (found) viewOrderDetails(found);
       }
     });
-  }, [searchParams]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filteredOrders = orders.filter(o => {
     const idNum = o.order_number || getShortOrderId(o.id);
@@ -227,7 +228,7 @@ export default function Orders() {
                       {order.customer ? order.customer.name : 'Walk-in Customer'}
                     </span>
                   </div>
-                  <span className="font-black text-gray-900 text-lg">â‚¹{order.grand_total}</span>
+                  <span className="font-black text-gray-900 text-lg">₹{order.grand_total}</span>
                 </div>
               </div>
             ))
@@ -273,7 +274,7 @@ export default function Orders() {
                         {order.status.replace(/_/g, ' ')}
                       </span>
                     </td>
-                    <td className="p-4 text-right font-bold text-gray-900">â‚¹{order.grand_total}</td>
+                    <td className="p-4 text-right font-bold text-gray-900">₹{order.grand_total}</td>
                     <td className="p-4 text-center">
                       <button
                         onClick={() => viewOrderDetails(order)}
@@ -301,7 +302,7 @@ export default function Orders() {
                 <h3 className="text-2xl font-black text-gray-900 tracking-tight">Order #{selectedOrder.order_number || getShortOrderId(selectedOrder.id)}</h3>
                 <p className="text-sm font-medium text-gray-500 mt-1 flex items-center gap-1.5">
                   <Calendar className="w-4 h-4" />
-                  {formatDate(selectedOrder.created_at)} â€¢ {formatTime(selectedOrder.created_at)}
+                  {formatDate(selectedOrder.created_at)} • {formatTime(selectedOrder.created_at)}
                 </p>
               </div>
               <button onClick={closeModal} className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full transition-colors active:scale-95">
@@ -329,7 +330,7 @@ export default function Orders() {
                 <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
                   <BanknoteIcon className="w-6 h-6 text-green-500 mb-2" />
                   <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Total</span>
-                  <span className="text-lg font-black text-gray-900 mt-1 leading-none">â‚¹{selectedOrder.grand_total}</span>
+                  <span className="text-lg font-black text-gray-900 mt-1 leading-none">₹{selectedOrder.grand_total}</span>
                 </div>
                 <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
                   <MonitorSmartphoneIcon className="w-6 h-6 text-orange-500 mb-2" />
@@ -356,20 +357,20 @@ export default function Orders() {
                             <span className="font-semibold text-gray-800 bg-gray-100 text-xs px-1.5 py-0.5 rounded h-max">{item.quantity}x</span>
                             <div className="flex flex-col">
                               <span className="font-medium text-gray-900 text-sm leading-tight flex items-center gap-1.5">
-                                <span className="text-[10px]">{item.menu_items?.is_veg ? 'ðŸŸ©' : 'ðŸŸ¥'}</span>
+                                <span className="text-[10px]">{item.menu_items?.is_veg ? '🟩' : '🟥'}</span>
                                 {item.menu_items?.name || 'Unknown Item'}
                               </span>
-                              <span className="text-xs text-gray-500 font-medium mt-0.5">â‚¹{item.unit_price} each</span>
+                              <span className="text-xs text-gray-500 font-medium mt-0.5">₹{item.unit_price} each</span>
                             </div>
                           </div>
-                          <span className="font-bold text-gray-900 text-sm">â‚¹{item.total_price}</span>
+                          <span className="font-bold text-gray-900 text-sm">₹{item.total_price}</span>
                         </div>
                       ))}
                       
                       <div className="border-t border-dashed border-gray-200 mt-4 pt-4 space-y-2.5">
                         <div className="flex justify-between text-base font-black text-gray-900 pt-2 border-t border-gray-100">
                           <span>Grand Total</span>
-                          <span>â‚¹{selectedOrder.grand_total}</span>
+                          <span>₹{selectedOrder.grand_total}</span>
                         </div>
                       </div>
                     </div>
@@ -421,11 +422,11 @@ export default function Orders() {
                         <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-50">
                           <div className="bg-gray-50 rounded-lg p-2 text-center">
                             <p className="text-[10px] uppercase font-bold text-gray-400">Commission</p>
-                            <p className="text-sm font-bold text-purple-700">â‚¹{selectedOrder.partner_commission || 0}</p>
+                            <p className="text-sm font-bold text-purple-700">₹{selectedOrder.partner_commission || 0}</p>
                           </div>
                           <div className="bg-gray-50 rounded-lg p-2 text-center">
                             <p className="text-[10px] uppercase font-bold text-gray-400">App Fee</p>
-                            <p className="text-sm font-bold text-blue-700">â‚¹{selectedOrder.owner_platform_fee || 0}</p>
+                            <p className="text-sm font-bold text-blue-700">₹{selectedOrder.owner_platform_fee || 0}</p>
                           </div>
                         </div>
                       </div>

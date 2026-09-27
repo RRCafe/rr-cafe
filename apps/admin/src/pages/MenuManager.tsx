@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { UtensilsCrossed, Plus, Trash2, X, Image as ImageIcon, Pencil, Check, Search, ChevronDown } from 'lucide-react';
 import { ConfirmModal } from '../components/ConfirmModal';
@@ -205,7 +205,7 @@ export default function MenuManager() {
                 <div className="flex-1 flex flex-col justify-center min-w-0">
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <h3 className="font-bold text-gray-900 truncate leading-tight flex items-center gap-1.5">
-                      <span className="text-xs">{item.is_veg ? 'ðŸŸ©' : 'ðŸŸ¥'}</span>
+                      <span className="text-xs">{item.is_veg ? '🟩' : '🟥'}</span>
                       {item.name}
                     </h3>
                     <button 
@@ -223,7 +223,7 @@ export default function MenuManager() {
                   <div className="flex items-center justify-between mt-auto">
                     {editingPriceId === item.id ? (
                       <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1">
-                        <span className="text-gray-500 text-sm font-medium pl-2">â‚¹</span>
+                        <span className="text-gray-500 text-sm font-medium pl-2">₹</span>
                         <input
                           type="number"
                           autoFocus
@@ -241,7 +241,7 @@ export default function MenuManager() {
                       </div>
                     ) : (
                       <div className="font-black text-gray-900 text-lg flex items-center gap-2">
-                        â‚¹{item.price}
+                        ₹{item.price}
                         <button onClick={() => { setEditingPriceValue(item.price.toString()); setEditingPriceId(item.id); }} className="text-blue-500 p-1 hover:bg-blue-50 rounded-md">
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
@@ -290,14 +290,14 @@ export default function MenuManager() {
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <span className="text-sm bg-white shadow-sm p-1 rounded-md">{item.is_veg ? 'ðŸŸ©' : 'ðŸŸ¥'}</span>
+                        <span className="text-sm bg-white shadow-sm p-1 rounded-md">{item.is_veg ? '🟩' : '🟥'}</span>
                         <span className="font-bold text-gray-800">{item.name}</span>
                       </div>
                     </td>
                     <td className="p-4 text-gray-700 font-medium">
                       {editingPriceId === item.id ? (
                         <div className="flex items-center gap-2">
-                          <span className="text-gray-500 font-bold">â‚¹</span>
+                          <span className="text-gray-500 font-bold">₹</span>
                           <input
                             type="number"
                             autoFocus
@@ -312,7 +312,7 @@ export default function MenuManager() {
                         </div>
                       ) : (
                         <div className="flex items-center gap-2 group/price cursor-pointer w-max" onClick={() => { setEditingPriceValue(item.price.toString()); setEditingPriceId(item.id); }}>
-                          <span>â‚¹{item.price}</span>
+                          <span>₹{item.price}</span>
                           <Pencil className="w-3.5 h-3.5 text-gray-300 group-hover/price:text-blue-500 transition-colors" />
                         </div>
                       )}
@@ -373,7 +373,7 @@ export default function MenuManager() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Price (â‚¹)</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Price (₹)</label>
                 <input
                   type="number"
                   required
@@ -394,14 +394,14 @@ export default function MenuManager() {
                     onClick={() => setNewItemVeg(true)}
                     className={`py-2.5 flex justify-center items-center gap-2 rounded-lg text-sm font-bold transition-all ${newItemVeg ? 'bg-white text-green-700 shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
                   >
-                    ðŸŸ© Veg
+                    🟩 Veg
                   </button>
                   <button
                     type="button"
                     onClick={() => setNewItemVeg(false)}
                     className={`py-2.5 flex justify-center items-center gap-2 rounded-lg text-sm font-bold transition-all ${!newItemVeg ? 'bg-white text-red-700 shadow-sm border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
                   >
-                    ðŸŸ¥ Non-Veg
+                    🟥 Non-Veg
                   </button>
                 </div>
               </div>

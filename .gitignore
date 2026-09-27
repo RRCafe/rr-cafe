@@ -7,6 +7,7 @@ oauth_credentials.json
 .vercel/
 .env*
 .agents/
+.planning
 graphify-out/
 menu/
 offlineaadhaar20260818072853141.zip
