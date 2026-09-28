@@ -119,6 +119,7 @@ export default function Billing() {
       const orderItems = cart.map(item => ({
         order_id: orderData.id,
         menu_item_id: item.id,
+        item_name: item.name,
         quantity: item.quantity,
         unit_price: item.price,
         total_price: item.price * item.quantity

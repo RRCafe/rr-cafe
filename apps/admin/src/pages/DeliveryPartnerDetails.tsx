@@ -114,13 +114,18 @@ export default function DeliveryPartnerDetails() {
           </div>
           <h2 className="text-2xl font-black text-gray-900 truncate">{partner.name || 'Unnamed Partner'}</h2>
         </div>
-                  <div className={`inline-flex px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider mx-auto sm:mx-0 w-max ${
-                    partner.status === 'online' ? 'bg-green-100 text-green-700' :
-                    partner.status === 'suspend' ? 'bg-red-100 text-red-700' :
-                    'bg-gray-100 text-gray-700'
-                  }`}>
-                    {partner.status}
-                  </div>
+                  {partner.status === 'online' ? (
+                      <div className="inline-flex px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider mx-auto sm:mx-0 w-max bg-green-100 text-green-700">
+                        {partner.status}
+                      </div>
+                    ) : (
+                      <div className="inline-flex px-3 py-1 rounded-lg text-xs font-bold tracking-wider mx-auto sm:mx-0 w-max bg-gray-100 text-gray-700">
+                        {partner.last_location_update ? new Date(partner.last_location_update).toLocaleString('en-IN', {
+                          hour: '2-digit', minute: '2-digit',
+                          day: '2-digit', month: 'short', year: 'numeric'
+                        }).replace(',', '') : 'Unknown'}
+                      </div>
+                    )}
                 </div>
 
                 {/* Badges/Tags instead of clumsy text block */}
