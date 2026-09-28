@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { History, Search, MapPin, X, ExternalLink, Bike, Receipt, ShoppingBag, Truck, Calendar, Phone, Package } from 'lucide-react';
+import { History, Search, MapPin, X, ExternalLink, Bike, Receipt, ShoppingBag, Truck, Calendar, Phone, Package, Map as MapIcon } from 'lucide-react';
 import { APIProvider, Map, AdvancedMarker } from '@vis.gl/react-google-maps';
 import { DirectionsRoute } from '../components/DirectionsRoute';
 
@@ -46,7 +46,6 @@ function LiveDeliveryMap({
   );
   
   const cafeLoc = { lat: 8.395596, lng: 78.052598 };
-  const mapCenter = (customerLat && customerLng) ? { lat: customerLat, lng: customerLng } : partnerLoc || cafeLoc;
 
   useEffect(() => {
     if (!hasPartner) return;
@@ -57,26 +56,58 @@ function LiveDeliveryMap({
     return () => { supabase.removeChannel(trackChannel); };
   }, [orderId, hasPartner]);
 
-  const isOutForDelivery = status === 'out_for_delivery';
   const isDelivered = status === 'delivered';
-  const isPreparingOrReady = status === 'preparing' || status === 'ready';
+  const isOutForDelivery = status === 'out_for_delivery';
+  const isPre = status === 'placed' || status === 'preparing' || status === 'ready' || status === 'pending';
 
-  const showCafeToCustomer = (!hasPartner || isPreparingOrReady) && customerLat && customerLng && !isDelivered;
-  const showPartnerToCafe = hasPartner && isPreparingOrReady && partnerLoc && !isDelivered;
-  const showPartnerToCustomer = isOutForDelivery && partnerLoc && customerLat && customerLng;
+  let mapCenter = cafeLoc;
+  let showCafe = !isDelivered;
+  let showCustomer = !!(customerLat && customerLng);
+  let showPartner = !!partnerLoc && !isDelivered;
+
+  let routes: any[] = [];
+  let gmapsLink = '';
+
+  if (isDelivered && customerLat && customerLng) {
+    mapCenter = { lat: customerLat, lng: customerLng };
+    showCafe = false;
+    showPartner = false;
+    gmapsLink = `https://www.google.com/maps/search/?api=1&query=${customerLat},${customerLng}`;
+  } else if (isOutForDelivery && partnerLoc && customerLat && customerLng) {
+    mapCenter = partnerLoc;
+    routes.push({ origin: partnerLoc, dest: { lat: customerLat, lng: customerLng } });
+    gmapsLink = `https://www.google.com/maps/dir/?api=1&origin=${partnerLoc.lat},${partnerLoc.lng}&destination=${customerLat},${customerLng}`;
+  } else if (isPre && hasPartner && partnerLoc && customerLat && customerLng) {
+    mapCenter = cafeLoc;
+    routes.push({ origin: partnerLoc, dest: cafeLoc });
+    routes.push({ origin: cafeLoc, dest: { lat: customerLat, lng: customerLng } });
+    gmapsLink = `https://www.google.com/maps/dir/?api=1&origin=${partnerLoc.lat},${partnerLoc.lng}&destination=${customerLat},${customerLng}&waypoints=${cafeLoc.lat},${cafeLoc.lng}`;
+  } else if (isPre && !hasPartner && customerLat && customerLng) {
+    mapCenter = { lat: customerLat, lng: customerLng };
+    routes.push({ origin: { lat: customerLat, lng: customerLng }, dest: cafeLoc });
+    gmapsLink = `https://www.google.com/maps/dir/?api=1&origin=${customerLat},${customerLng}&destination=${cafeLoc.lat},${cafeLoc.lng}`;
+  } else if (customerLat && customerLng) {
+    mapCenter = { lat: customerLat, lng: customerLng };
+    gmapsLink = `https://www.google.com/maps/search/?api=1&query=${customerLat},${customerLng}`;
+  }
 
   return (
-    <div className="h-48 md:h-64 w-full rounded-2xl overflow-hidden mt-4 shadow-inner border border-gray-100">
-      <APIProvider apiKey={apiKey}>
-        <Map defaultCenter={mapCenter} defaultZoom={14} gestureHandling={'greedy'} disableDefaultUI={true} mapId="live-map-admin">
-          <AdvancedMarker position={cafeLoc}><MapPin className="text-red-500 w-8 h-8 drop-shadow-md" /></AdvancedMarker>
-          {customerLat && customerLng && <AdvancedMarker position={{ lat: customerLat, lng: customerLng }}><MapPin className="text-blue-500 w-8 h-8 drop-shadow-md" /></AdvancedMarker>}
-          {partnerLoc && <AdvancedMarker position={partnerLoc}><Bike className="text-purple-600 bg-white p-1 rounded-full shadow-lg w-8 h-8" /></AdvancedMarker>}
-          {showCafeToCustomer && <DirectionsRoute origin={cafeLoc} destination={{ lat: customerLat, lng: customerLng }} />}
-          {showPartnerToCafe && <DirectionsRoute origin={partnerLoc} destination={cafeLoc} />}
-          {showPartnerToCustomer && <DirectionsRoute origin={partnerLoc} destination={{ lat: customerLat, lng: customerLng }} />}
-        </Map>
-      </APIProvider>
+    <div className="flex flex-col gap-2 mt-4">
+      <div className="h-[300px] md:h-[400px] w-full rounded-2xl overflow-hidden shadow-inner border border-gray-100">
+        <APIProvider apiKey={apiKey}>
+          <Map defaultCenter={mapCenter} defaultZoom={14} gestureHandling={'greedy'} disableDefaultUI={true} mapId="live-map-admin">
+            {showCafe && <AdvancedMarker position={cafeLoc}><MapPin className="text-red-500 w-8 h-8 drop-shadow-md" /></AdvancedMarker>}
+            {showCustomer && <AdvancedMarker position={{ lat: customerLat!, lng: customerLng! }}><MapPin className="text-blue-500 w-8 h-8 drop-shadow-md" /></AdvancedMarker>}
+            {showPartner && <AdvancedMarker position={partnerLoc!}><Bike className="text-purple-600 bg-white p-1 rounded-full shadow-lg w-8 h-8" /></AdvancedMarker>}
+            {routes.map((r, i) => <DirectionsRoute key={i} origin={r.origin} destination={r.dest} />)}
+          </Map>
+        </APIProvider>
+      </div>
+      {gmapsLink && (
+        <a href={gmapsLink} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-blue-600 hover:text-blue-500 flex items-center justify-center gap-1.5 bg-blue-50 py-2.5 rounded-xl border border-blue-100 transition-colors active:scale-95">
+          <MapIcon className="w-4 h-4" /> Open in Google Maps
+        </a>
+      )}
     </div>
   );
 }
@@ -108,7 +139,14 @@ export default function Orders() {
            idNum.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
-  const fetchOrders = async () => {
+  useEffect(() => {
+      const orderId = searchParams.get('order_id');
+      if (!orderId && selectedOrder) {
+        setSelectedOrder(null);
+      }
+    }, [searchParams]);
+    
+    const fetchOrders = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('orders')
@@ -150,9 +188,9 @@ export default function Orders() {
   };
 
   const closeModal = () => {
-    setSearchParams({});
-    setSelectedOrder(null);
-  };
+      setSearchParams({}, { replace: true });
+      setSelectedOrder(null);
+    };
 
   const getStatusStyle = (status: string) => {
     switch(status) {
@@ -352,7 +390,7 @@ export default function Orders() {
                   ) : (
                     <div className="space-y-4">
                       {selectedOrderItems.map((item, idx) => (
-                        <div key={idx} className="flex justify-between items-start">
+                        <div key={idx} className="flex justify-between items-start border-b border-dashed border-gray-200 pb-3 mb-3 last:border-0 last:pb-0 last:mb-0">
                           <div className="flex gap-2.5">
                             <span className="font-semibold text-gray-800 bg-gray-100 text-xs px-1.5 py-0.5 rounded h-max">{item.quantity}x</span>
                             <div className="flex flex-col">
@@ -367,7 +405,7 @@ export default function Orders() {
                         </div>
                       ))}
                       
-                      <div className="border-t border-dashed border-gray-200 mt-4 pt-4 space-y-2.5">
+                      <div className="mt-4 pt-4 space-y-2.5">
                         <div className="flex justify-between text-base font-black text-gray-900 pt-2 border-t border-gray-100">
                           <span>Grand Total</span>
                           <span>₹{selectedOrder.grand_total}</span>

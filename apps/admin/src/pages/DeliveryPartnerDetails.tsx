@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { User, ArrowLeft, Clock, CheckCircle, Phone, Mail, Calendar, Key, Bike, Map, IndianRupee } from 'lucide-react';
 
 export default function DeliveryPartnerDetails() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [partner, setPartner] = useState<any>(null);
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,9 +72,9 @@ export default function DeliveryPartnerDetails() {
       
       {/* Header */}
       <div className="flex items-center gap-3 md:gap-4 mb-6 shrink-0 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 w-full overflow-hidden">
-        <Link to="/partners" className="p-2 hover:bg-gray-100 bg-gray-50 rounded-full transition-all active:scale-95 text-gray-600 shrink-0">
-          <ArrowLeft className="w-5 h-5 md:w-6 md:h-6" />
-        </Link>
+        <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 bg-gray-50 rounded-full transition-all active:scale-95 text-gray-600 shrink-0">
+            <ArrowLeft className="w-5 h-5 md:w-6 md:h-6" />
+          </button>
         <div className="flex items-center gap-2.5">
           <div className="md:hidden w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm shadow-blue-500/30 shrink-0">
             <User className="w-5 h-5 text-white" />
@@ -157,7 +159,9 @@ export default function DeliveryPartnerDetails() {
               </div>
               <div className="bg-white p-4">
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1">Gender</p>
-                <p className="text-sm font-bold text-gray-900 capitalize">{partner.gender || 'N/A'}</p>
+                <p className="text-sm font-bold text-gray-900 capitalize">
+    {partner.gender?.toLowerCase() === 'm' ? 'Male' : partner.gender?.toLowerCase() === 'f' ? 'Female' : partner.gender || 'N/A'}
+  </p>
               </div>
               <div className="bg-white p-4">
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1">Govt ID</p>

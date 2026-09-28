@@ -14,6 +14,7 @@ interface DeliveryPartner {
   status: string;
   current_lat?: number;
   current_lng?: number;
+  last_seen?: string;
   total_earnings?: number;
   last_location_update?: string;
   profiles?: {
@@ -22,10 +23,18 @@ interface DeliveryPartner {
   };
 }
 
+
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const p = 0.017453292519943295;
+  const c = Math.cos;
+  const a = 0.5 - c((lat2 - lat1) * p)/2 + c(lat1 * p) * c(lat2 * p) * (1 - c((lon2 - lon1) * p))/2;
+  return 12742 * Math.asin(Math.sqrt(a)); // 2 * R; R = 6371 km
+}
 export default function DeliveryPartners() {
   const [partners, setPartners] = useState<DeliveryPartner[]>([]);
   const [loading, setLoading] = useState(true);
   const [showMapModal, setShowMapModal] = useState(false);
+  const [selectedMarker, setSelectedMarker] = useState<string | null>(null);
   const mapKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
   useEffect(() => {
@@ -174,14 +183,19 @@ export default function DeliveryPartners() {
                     {partners.filter(p => p.current_lat && p.current_lng).map(partner => (
                       <AdvancedMarker 
                         key={partner.id}
-                        position={{ lat: partner.current_lat, lng: partner.current_lng }} 
+                        position={{ lat: partner.current_lat!, lng: partner.current_lng! }} 
                         title={partner.name}
+                        onClick={() => setSelectedMarker(selectedMarker === partner.id ? null : partner.id)}
                       >
-                        <div className="flex flex-col items-center cursor-pointer">
-                          <Bike className="text-purple-600 bg-white p-1 rounded-full shadow-lg border border-gray-100 w-8 h-8 md:w-10 md:h-10" />
-                          <div className="mt-1 bg-gray-900/90 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm whitespace-nowrap z-50">
-                            {partner.name || 'Partner'}
-                          </div>
+                        <div className="relative flex flex-col items-center cursor-pointer">
+                          <Bike className="text-white bg-purple-600 p-1 rounded-full shadow border-2 border-white w-6 h-6 md:w-8 md:h-8" />
+                          {selectedMarker === partner.id && (
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 bg-white border border-gray-100 text-gray-800 text-[10px] font-medium px-2 py-1.5 rounded shadow-xl whitespace-nowrap z-50 flex flex-col items-center min-w-[100px]">
+                              <span className="font-bold text-gray-900 text-xs mb-0.5">{partner.name || 'Partner'}</span>
+                              <span className="text-gray-500">Last Seen: {partner.last_seen ? new Date(partner.last_seen).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Unknown'}</span>
+                              <span className="text-blue-600 font-bold mt-0.5">{getDistance(8.395596, 78.052598, partner.current_lat!, partner.current_lng!).toFixed(1)} km</span>
+                            </div>
+                          )}
                         </div>
                       </AdvancedMarker>
                     ))}

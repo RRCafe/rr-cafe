@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Save } from 'lucide-react';
+import { Save , Settings as SettingsIcon} from 'lucide-react';
 import { ConfirmModal } from '../components/ConfirmModal';
 
 interface PricingConfig {
@@ -69,7 +69,12 @@ export default function Settings() {
 
   return (
     <div className="p-6 max-w-3xl">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">Pricing Settings</h2>
+      <div className="flex items-center gap-2.5 mb-6">
+        <div className="md:hidden w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm shadow-blue-500/30 shrink-0">
+          <SettingsIcon className="w-5 h-5 text-white" />
+        </div>
+        <h2 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">Settings</h2>
+      </div>
       
       
 
