@@ -15,8 +15,9 @@ interface CartItem extends MenuItem {
   quantity: number;
 }
 
+let cachedBillingItems: MenuItem[] = [];
 export default function Billing() {
-  const [items, setItems] = useState<MenuItem[]>([]);
+  const [items, setItems] = useState<MenuItem[]>(cachedBillingItems);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orderType, setOrderType] = useState<'dine_in' | 'dine_out'>('dine_in');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'direct_qr'>('cash');
@@ -48,7 +49,8 @@ export default function Billing() {
       .eq('is_available', true)
       .order('name');
     if (!error && data) {
-      setItems(data);
+      cachedBillingItems = data;
+        setItems(data);
     }
   };
 

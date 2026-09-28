@@ -17,8 +17,9 @@ interface MenuItem {
 
 const BUSINESS_TYPES = ['cafe', 'ice cream'];
 
+let cachedMenuItems: MenuItem[] = [];
 export default function MenuManager() {
-  const [items, setItems] = useState<MenuItem[]>([]);
+  const [items, setItems] = useState<MenuItem[]>(cachedMenuItems);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,6 +30,7 @@ export default function MenuManager() {
   const [newItemVeg, setNewItemVeg] = useState(true);
   const [newItemBusiness, setNewItemBusiness] = useState('cafe');
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // UI states
@@ -59,11 +61,12 @@ export default function MenuManager() {
   }, []);
 
   const fetchItems = async () => {
-    setLoading(true);
-    const { data, error } = await supabase.from('menu_items').select('*').order('name');
+    if (cachedMenuItems.length === 0) setLoading(true);
+      const { data, error } = await supabase.from('menu_items').select('*').order('name');
     if (!error && data) {
       cached_items = data;
-      setItems(data);
+      cachedMenuItems = data;
+        setItems(data);
     }
     setLoading(false);
   };
@@ -102,7 +105,9 @@ export default function MenuManager() {
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setImageFile(e.target.files[0]);
+      const file = e.target.files[0];
+      setImageFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
     }
   };
 
@@ -140,7 +145,8 @@ export default function MenuManager() {
       setNewItemVeg(true);
       setNewItemBusiness('cafe');
       setImageFile(null);
-      fetchItems();
+        setPreviewUrl(null);
+        fetchItems();
     } else {
       console.error(error);
       setModalConfig({ isOpen: true, title: 'Error', message: 'Error adding item: ' + error.message, isError: true });
@@ -439,18 +445,31 @@ export default function MenuManager() {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Image (Optional)</label>
-                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-xl hover:border-blue-400 transition-colors bg-gray-50/50">
-                  <div className="space-y-1 text-center">
-                    <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
-                    <div className="flex text-sm text-gray-600">
-                      <label htmlFor="file-upload" className="relative cursor-pointer rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none">
-                        <span>Upload a file</span>
-                        <input id="file-upload" name="file-upload" type="file" accept="image/*" className="sr-only" onChange={handleImageChange} />
-                      </label>
-                      <p className="pl-1">or drag and drop</p>
+                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-xl hover:border-blue-400 transition-colors bg-gray-50/50 relative overflow-hidden h-40">
+                  {previewUrl ? (
+                    <div className="absolute inset-0 w-full h-full bg-black/5 flex items-center justify-center group">
+                      <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                      <button 
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); setImageFile(null); setPreviewUrl(null); }}
+                        className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm p-1.5 rounded-full text-gray-700 hover:bg-red-50 hover:text-red-600 shadow-sm transition-colors z-10"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
                     </div>
-                    <p className="text-xs text-gray-500">{imageFile ? imageFile.name : 'PNG, JPG, GIF up to 5MB'}</p>
-                  </div>
+                  ) : (
+                    <div className="space-y-1 text-center flex flex-col justify-center">
+                      <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
+                      <div className="flex text-sm text-gray-600">
+                        <label htmlFor="file-upload" className="relative cursor-pointer rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none">
+                          <span>Upload a file</span>
+                          <input id="file-upload" name="file-upload" type="file" accept="image/*" className="sr-only" onChange={handleImageChange} />
+                        </label>
+                        <p className="pl-1">or drag and drop</p>
+                      </div>
+                      <p className="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
+                    </div>
+                  )}
                 </div>
               </div>
 

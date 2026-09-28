@@ -30,11 +30,39 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
   const a = 0.5 - c((lat2 - lat1) * p)/2 + c(lat1 * p) * c(lat2 * p) * (1 - c((lon2 - lon1) * p))/2;
   return 12742 * Math.asin(Math.sqrt(a)); // 2 * R; R = 6371 km
 }
+let cachedPartners: DeliveryPartner[] = [];
 export default function DeliveryPartners() {
-  const [partners, setPartners] = useState<DeliveryPartner[]>([]);
+  const [partners, setPartners] = useState<DeliveryPartner[]>(cachedPartners);
   const [loading, setLoading] = useState(true);
   const [showMapModal, setShowMapModal] = useState(false);
   const [selectedMarker, setSelectedMarker] = useState<string | null>(null);
+  const [olaDistances, setOlaDistances] = useState<Record<string, string>>({});
+  
+  useEffect(() => {
+    const fetchDistances = async () => {
+      const olaApiKey = import.meta.env.VITE_OLA_MAPS_API_KEY;
+      if (!olaApiKey) return;
+      
+      for (const p of partners) {
+        if (p.current_lat && p.current_lng && !olaDistances[p.id]) {
+          try {
+            const res = await fetch(`https://api.olamaps.io/routing/v1/directions?origin=8.395596,78.052598&destination=${p.current_lat},${p.current_lng}&api_key=${olaApiKey}`, {
+              method: 'POST',
+              headers: { 'X-Request-Id': crypto.randomUUID() }
+            });
+            const data = await res.json();
+            if (data.routes && data.routes.length > 0) {
+              const distanceMeters = data.routes[0].legs[0].distance; // assuming this structure
+              setOlaDistances(prev => ({ ...prev, [p.id]: (distanceMeters / 1000).toFixed(1) }));
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      }
+    };
+    fetchDistances();
+  }, [partners]);
   const mapKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
   useEffect(() => {
@@ -52,14 +80,15 @@ export default function DeliveryPartners() {
   }, []);
 
   async function fetchPartners(background = false) {
-    if (!background) setLoading(true);
-    const { data, error } = await supabase
+    if (!background) if (cachedPartners.length === 0) setLoading(true);
+      const { data, error } = await supabase
       .from('delivery_partners')
       .select('*')
       .order('status', { ascending: false });
       
     if (data && !error) {
-      setPartners(data as any);
+      cachedPartners = data as any;
+        setPartners(data as any);
     }
     if (!background) setLoading(false);
   }
@@ -188,12 +217,12 @@ export default function DeliveryPartners() {
                         onClick={() => setSelectedMarker(selectedMarker === partner.id ? null : partner.id)}
                       >
                         <div className="relative flex flex-col items-center cursor-pointer">
-                          <Bike className="text-white bg-purple-600 p-1 rounded-full shadow border-2 border-white w-6 h-6 md:w-8 md:h-8" />
+                          <Bike className={`text-white p-1 rounded-full shadow border-2 border-white w-6 h-6 md:w-8 md:h-8 ${partner.status === 'online' ? 'bg-green-500' : 'bg-red-500'}`} />
                           {selectedMarker === partner.id && (
                             <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 bg-white border border-gray-100 text-gray-800 text-[10px] font-medium px-2 py-1.5 rounded shadow-xl whitespace-nowrap z-50 flex flex-col items-center min-w-[100px]">
                               <span className="font-bold text-gray-900 text-xs mb-0.5">{partner.name || 'Partner'}</span>
-                              <span className="text-gray-500">Last Seen: {partner.last_seen ? new Date(partner.last_seen).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Unknown'}</span>
-                              <span className="text-blue-600 font-bold mt-0.5">{getDistance(8.395596, 78.052598, partner.current_lat!, partner.current_lng!).toFixed(1)} km</span>
+                              
+                              <span className="text-blue-600 font-bold mt-0.5">{olaDistances[partner.id] ? `${olaDistances[partner.id]} km` : `${getDistance(8.395596, 78.052598, partner.current_lat!, partner.current_lng!).toFixed(1)} km (est)`}</span>
                             </div>
                           )}
                         </div>

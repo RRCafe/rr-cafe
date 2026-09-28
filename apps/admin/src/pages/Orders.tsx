@@ -112,9 +112,10 @@ function LiveDeliveryMap({
   );
 }
 
+let cachedOrders: Order[] = [];
 export default function Orders() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<Order[]>(cachedOrders);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedOrderItems, setSelectedOrderItems] = useState<OrderItem[]>([]);
@@ -147,8 +148,8 @@ export default function Orders() {
     }, [searchParams]);
     
     const fetchOrders = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
+    if (cachedOrders.length === 0) setLoading(true);
+      const { data, error } = await supabase
       .from('orders')
       .select(`
         id, created_at, status, order_type, grand_total, partner_commission, owner_platform_fee, source, delivery_address, delivery_lat, delivery_lng, delivery_partner_id, picked_up_at, delivered_at,
@@ -389,7 +390,8 @@ export default function Orders() {
                     <div className="text-center py-6 text-gray-400 text-sm font-medium">Loading items...</div>
                   ) : (
                     <div className="space-y-4">
-                      {selectedOrderItems.map((item, idx) => (
+<div className="flex flex-col">
+{selectedOrderItems.map((item, idx) => (
                         <div key={idx} className="flex justify-between items-start border-b border-dashed border-gray-200 pb-3 mb-3 last:border-0 last:pb-0 last:mb-0">
                           <div className="flex gap-2.5">
                             <span className="font-semibold text-gray-800 bg-gray-100 text-xs px-1.5 py-0.5 rounded h-max">{item.quantity}x</span>
@@ -403,9 +405,8 @@ export default function Orders() {
                           </div>
                           <span className="font-bold text-gray-900 text-sm">₹{item.total_price}</span>
                         </div>
-                      ))}
-                      
-                      <div className="mt-4 pt-4 space-y-2.5">
+))}</div>
+<div className="mt-4 pt-4 space-y-2.5">
                         <div className="flex justify-between text-base font-black text-gray-900 pt-2 border-t border-gray-100">
                           <span>Grand Total</span>
                           <span>₹{selectedOrder.grand_total}</span>

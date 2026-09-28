@@ -18,8 +18,9 @@ interface Order {
   partner?: { name: string; phone_number: string } | null;
 }
 
+let cachedLiveOrders: Order[] = [];
 export default function LiveOrders() {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<Order[]>(cachedLiveOrders);
 
   useEffect(() => {
     requestNotificationPermission();
@@ -61,6 +62,7 @@ export default function LiveOrders() {
 
     if (!error && data) {
       cached_orders = data;
+        cachedLiveOrders = data;
         setOrders(data);
     }
   };
