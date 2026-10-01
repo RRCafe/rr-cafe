@@ -1,23 +1,23 @@
 {
   "rewrites": [
     {
+      "source": "/admin/((?!assets/).*)",
+      "destination": "/admin/index.html"
+    },
+    {
       "source": "/admin",
       "destination": "/admin/index.html"
     },
     {
-      "source": "/admin/:path((?!assets/).*)",
-      "destination": "/admin/index.html"
+      "source": "/delivery/((?!assets/).*)",
+      "destination": "/delivery/index.html"
     },
     {
       "source": "/delivery",
       "destination": "/delivery/index.html"
     },
     {
-      "source": "/delivery/:path((?!assets/).*)",
-      "destination": "/delivery/index.html"
-    },
-    {
-      "source": "/:path((?!assets/).*)",
+      "source": "/((?!assets/|admin/|delivery/).*)",
       "destination": "/index.html"
     }
   ],

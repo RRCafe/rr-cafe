@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'RR Cafe Admin',
   webDir: 'dist',
   server: {
-    url: 'https://rrcafe.vercel.app/admin',
+    url: 'https://rr-cafe.vercel.app/admin',
     cleartext: true
   }
 };

@@ -1,45 +1,82 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Karla:wght@300;400;500;600;700&family=Playfair+Display+SC:wght@400;700&display=swap');
 
 @theme {
-  --color-blue-50: #F3EFEA;
-  --color-blue-100: #E6DED6;
-  --color-blue-200: #CBBAB0;
-  --color-blue-300: #B19789;
-  --color-blue-400: #967463;
-  --color-blue-500: #7C513C;
-  --color-blue-600: #4A3728;
-  --color-blue-700: #3E2E21;
-  --color-blue-800: #32251A;
-  --color-blue-900: #251B13;
-
-  --color-red-50: #FAEBED;
-  --color-red-100: #F5D6DC;
-  --color-red-200: #EAAEB8;
-  --color-red-300: #DF8594;
-  --color-red-400: #D45D70;
-  --color-red-500: #C8102E;
-  --color-red-600: #B40E29;
-  --color-red-700: #8C0B20;
-  --color-red-800: #640817;
-  --color-red-900: #3C050E;
-
-  --color-gray-50: #F5EEDC;
-  --color-gray-100: #E8DCC4;
-  --color-gray-200: #D2BA96;
+  --color-primary: #DC2626;
+  --color-on-primary: #FFFFFF;
+  --color-secondary: #F87171;
+  --color-on-secondary: #0F172A;
+  --color-accent: #A16207;
+  --color-on-accent: #FFFFFF;
   
-  --animate-fade-in-up: fade-in-up 0.3s ease-out;
+  --color-background: #0f172a;
+  --color-foreground: #f8fafc;
+  
+  --font-sans: 'Karla', sans-serif;
+  --font-serif: 'Playfair Display SC', serif;
+  
+  --animate-fade-in-up: fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-scale-in: scale-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  
   @keyframes fade-in-up {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes scale-in {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
   }
 }
 
 body {
-  background-color: var(--color-gray-50);
+  font-family: 'Karla', sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  /* Vibrant background with blobs */
+  background-image: 
+    radial-gradient(circle at 15% 50%, rgba(220, 38, 38, 0.15), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(161, 98, 7, 0.15), transparent 25%);
+  background-attachment: fixed;
+}
+
+.font-serif {
+  font-family: 'Playfair Display SC', serif;
+}
+
+/* Glassmorphism Utilities */
+.glass {
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+.glass-card {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+.glass-button {
+  background: rgba(220, 38, 38, 0.8);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  transition: all 0.3s ease;
+}
+.glass-button:hover {
+  background: rgba(220, 38, 38, 1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.3);
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
