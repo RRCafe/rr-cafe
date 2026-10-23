@@ -10,6 +10,8 @@ interface PricingConfig {
   free_delivery_threshold: number;
   platform_fee_type: 'flat' | 'percentage';
   platform_fee_value: number;
+  packaging_fee: number;
+  packaging_fee_type: 'per_order' | 'per_item';
 }
 
 export default function Settings() {
@@ -26,7 +28,11 @@ export default function Settings() {
     setLoading(true);
     const { data, error } = await supabase.from('pricing_config').select('*').single();
     if (!error && data) {
-      setConfig(data);
+      setConfig({
+        ...data,
+        packaging_fee: data.packaging_fee ?? 0,
+        packaging_fee_type: data.packaging_fee_type ?? 'per_order',
+      });
     }
     setLoading(false);
   };
@@ -36,7 +42,6 @@ export default function Settings() {
     if (!config) return;
 
     setSaving(true);
-    
 
     const { error } = await supabase
       .from('pricing_config')
@@ -46,6 +51,8 @@ export default function Settings() {
         free_delivery_threshold: config.free_delivery_threshold,
         platform_fee_type: config.platform_fee_type,
         platform_fee_value: config.platform_fee_value,
+        packaging_fee: config.packaging_fee,
+        packaging_fee_type: config.packaging_fee_type,
       })
       .eq('id', config.id);
 
@@ -55,8 +62,6 @@ export default function Settings() {
       setModalConfig({ isOpen: true, title: 'Success', message: 'Settings saved successfully!', isError: false });
     }
     setSaving(false);
-    
-    
   };
 
   if (loading) {
@@ -75,12 +80,40 @@ export default function Settings() {
         </div>
         <h2 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">Settings</h2>
       </div>
-      
-      
 
       <form onSubmit={handleSave} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-        
+
+        {/* Packaging Fees */}
         <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Packaging Fees</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Packaging Fee (₹)</label>
+              <input
+                type="number"
+                value={config.packaging_fee}
+                onChange={e => setConfig({ ...config, packaging_fee: Number(e.target.value) })}
+                className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                min="0" step="0.01"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Calculation Method</label>
+              <select
+                value={config.packaging_fee_type}
+                onChange={e => setConfig({ ...config, packaging_fee_type: e.target.value as 'per_order' | 'per_item' })}
+                className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="per_order">For each order</option>
+                <option value="per_item">For each item</option>
+              </select>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500">Applied to takeaway orders during billing.</p>
+        </div>
+
+        {/* Delivery Fees */}
+        <div className="space-y-4 pt-4 border-t border-gray-100">
           <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Delivery Fees</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -121,6 +154,7 @@ export default function Settings() {
           </div>
         </div>
 
+        {/* Platform Fees */}
         <div className="space-y-4 pt-4 border-t border-gray-100">
           <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Platform Fees</h3>
           
@@ -165,7 +199,7 @@ export default function Settings() {
           </button>
         </div>
 
-            </form>
+      </form>
       <ConfirmModal
         isOpen={modalConfig.isOpen}
         title={modalConfig.title}

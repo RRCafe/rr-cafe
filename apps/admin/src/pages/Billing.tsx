@@ -15,6 +15,11 @@ interface CartItem extends MenuItem {
   quantity: number;
 }
 
+interface PricingConfig {
+  packaging_fee: number;
+  packaging_fee_type: 'per_order' | 'per_item';
+}
+
 let cachedBillingItems: MenuItem[] = [];
 export default function Billing() {
   const [items, setItems] = useState<MenuItem[]>(cachedBillingItems);
@@ -23,6 +28,7 @@ export default function Billing() {
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'direct_qr'>('cash');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', isError: false });
+  const [pricingConfig, setPricingConfig] = useState<PricingConfig | null>(null);
   
   // Combobox state
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,6 +37,7 @@ export default function Billing() {
 
   useEffect(() => {
     fetchItems();
+    fetchPricingConfig();
     
     // Click outside to close dropdown
     const handleClickOutside = (event: MouseEvent) => {
@@ -51,6 +58,19 @@ export default function Billing() {
     if (!error && data) {
       cachedBillingItems = data;
         setItems(data);
+    }
+  };
+
+  const fetchPricingConfig = async () => {
+    const { data } = await supabase
+      .from('pricing_config')
+      .select('packaging_fee, packaging_fee_type')
+      .single();
+    if (data) {
+      setPricingConfig({
+        packaging_fee: data.packaging_fee ?? 0,
+        packaging_fee_type: data.packaging_fee_type ?? 'per_order',
+      });
     }
   };
 
@@ -97,6 +117,13 @@ export default function Billing() {
   const total = Number(cart.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2));
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
+  const packagingFee = orderType === 'dine_out'
+    ? (pricingConfig?.packaging_fee_type === 'per_item'
+      ? (pricingConfig?.packaging_fee || 0) * totalItems
+      : (pricingConfig?.packaging_fee || 0))
+    : 0;
+  const grandTotal = Number((total + packagingFee).toFixed(2));
+
   const handleCompleteOrder = async () => {
     if (cart.length === 0) return;
     setIsSubmitting(true);
@@ -107,7 +134,7 @@ export default function Billing() {
         .insert({
           status: 'delivered',
           order_type: orderType,
-          grand_total: total, items_subtotal: total,
+          grand_total: grandTotal, items_subtotal: total,
           business_type: cart[0]?.business_type || 'RR Cafe',
           source: 'pos_manual'
         })
@@ -130,7 +157,7 @@ export default function Billing() {
 
       const { error: paymentError } = await supabase.from('payments').insert({
         order_id: orderData.id,
-        amount: total,
+        amount: grandTotal,
         payment_status: 'manual_success',
         payment_method: paymentMethod
       });
@@ -387,8 +414,20 @@ export default function Billing() {
           <div className="bg-white text-gray-900 border border-gray-100 rounded-2xl shadow-xl p-6 mt-auto">
             <div className="flex justify-between items-end mb-6">
               <div>
-                <p className="text-gray-500 font-medium text-sm mb-1">Grand Total ({totalItems} items)</p>
-                <div className="text-4xl font-black tracking-tight">₹{total}</div>
+                <p className="text-gray-500 font-medium text-sm mb-1">Subtotal ({totalItems} items)</p>
+                <div className="text-2xl font-black tracking-tight">₹{total}</div>
+                {orderType === 'dine_out' && packagingFee > 0 && (
+                  <div className="flex items-center justify-between text-sm text-gray-600 mt-2">
+                    <span>Packaging Fee ({pricingConfig?.packaging_fee_type === 'per_item' ? `₹${pricingConfig.packaging_fee} × ${totalItems} items` : 'per order'})</span>
+                    <span className="font-semibold ml-4">+₹{packagingFee}</span>
+                  </div>
+                )}
+                {orderType === 'dine_out' && packagingFee > 0 && (
+                  <div className="text-3xl font-black tracking-tight mt-2 text-blue-700">₹{grandTotal} <span className="text-sm font-medium text-gray-500">total</span></div>
+                )}
+                {(orderType === 'dine_in' || packagingFee === 0) && (
+                  <div className="text-4xl font-black tracking-tight mt-1">₹{grandTotal}</div>
+                )}
               </div>
             </div>
             

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { History, Search, MapPin, X, ExternalLink, Bike, Receipt, ShoppingBag, Truck, Calendar, Phone, Package, Map as MapIcon } from 'lucide-react';
+import { History, Search, MapPin, X, ExternalLink, Bike, Receipt, ShoppingBag, Truck, Calendar, Phone, Package, Map as MapIcon, BarChart2 } from 'lucide-react';
 import { APIProvider, Map, AdvancedMarker } from '@vis.gl/react-google-maps';
 import { DirectionsRoute } from '../components/DirectionsRoute';
 
@@ -221,6 +221,13 @@ export default function Orders() {
           </div>
           <h2 className="text-xl md:text-2xl font-bold text-gray-800 tracking-tight">Order History</h2>
         </div>
+        <Link
+          to="/orders/report"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/20"
+        >
+          <BarChart2 className="w-4 h-4" />
+          Reports
+        </Link>
         <div className="relative w-full md:w-80">
           <input
             type="text"

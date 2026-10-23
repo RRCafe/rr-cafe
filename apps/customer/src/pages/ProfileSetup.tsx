@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { MapPin, Phone, User as UserIcon } from 'lucide-react';
-import ConfirmModal from '../components/ConfirmModal';
+import { MapPin, Phone } from 'lucide-react';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 export default function ProfileSetup() {
   const { user } = useAuth();
@@ -53,77 +53,64 @@ export default function ProfileSetup() {
   if (!user) return null;
 
   return (
-    <div className="flex flex-col justify-center items-center py-12 px-4 animate-fade-in-up">
-      <div className="w-full max-w-md">
-        
-        <div className="text-center mb-10">
-          <div className="w-20 h-20 bg-gradient-to-br from-red-600 to-amber-600 rounded-full mx-auto flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(220,38,38,0.4)] border-2 border-white/20">
-            {user?.user_metadata?.avatar_url ? (
-               <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full rounded-full object-cover" />
-            ) : (
-               <UserIcon size={32} className="text-white" />
-            )}
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center p-4">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Complete Your Profile</h1>
+        <p className="text-gray-500 mb-8">Add your delivery details for a seamless ordering experience.</p>
+
+        <form onSubmit={handleSave} className="space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Phone className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                type="tel"
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="pl-10 w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                placeholder="Enter 10-digit number"
+              />
+            </div>
           </div>
-          <h1 className="text-3xl font-serif font-bold text-white mb-2 tracking-wide">Complete Profile</h1>
-          <p className="text-white/60 text-sm">Add your details for a seamless dining experience.</p>
-        </div>
 
-        <div className="glass-card rounded-3xl p-8 border border-white/10 shadow-2xl">
-          <form onSubmit={handleSave} className="space-y-6">
-            <div>
-              <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-2">Phone Number *</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Phone className="h-5 w-5 text-white/30 group-focus-within:text-red-400 transition-colors" />
-                </div>
-                <input
-                  type="tel"
-                  required
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="pl-12 w-full bg-white/5 border border-white/10 rounded-xl py-3.5 text-white placeholder-white/30 focus:border-red-500 focus:bg-white/10 outline-none transition-all shadow-inner"
-                  placeholder="Enter 10-digit number"
-                />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Default Address</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-start pt-3 pointer-events-none">
+                <MapPin className="h-5 w-5 text-gray-400" />
               </div>
+              <textarea
+                required
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                rows={3}
+                className="pl-10 w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all resize-none"
+                placeholder="Enter your complete delivery address"
+              />
             </div>
+          </div>
 
-            <div>
-              <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-2">Default Address *</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 pt-4 flex items-start pointer-events-none">
-                  <MapPin className="h-5 w-5 text-white/30 group-focus-within:text-red-400 transition-colors" />
-                </div>
-                <textarea
-                  required
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  rows={3}
-                  className="pl-12 w-full bg-white/5 border border-white/10 rounded-xl py-3.5 text-white placeholder-white/30 focus:border-red-500 focus:bg-white/10 outline-none transition-all shadow-inner resize-none"
-                  placeholder="Enter your complete delivery address"
-                />
-              </div>
-            </div>
-
-            <div className="pt-4 space-y-4">
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full glass-button py-4 rounded-xl font-bold shadow-lg uppercase tracking-widest text-sm"
-              >
-                {loading ? 'Saving Profile...' : 'Save & Continue'}
-              </button>
-              <button
-                type="button"
-                onClick={handleSkip}
-                className="w-full bg-transparent text-white/50 font-bold py-3.5 rounded-xl border border-white/10 hover:bg-white/5 hover:text-white transition-colors uppercase tracking-widest text-xs"
-              >
-                Skip for now
-              </button>
-            </div>
-          </form>
-        </div>
+          <div className="pt-4 space-y-3">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-red-600 text-white font-bold py-3 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-70"
+            >
+              {loading ? 'Saving...' : 'Save & Continue'}
+            </button>
+            <button
+              type="button"
+              onClick={handleSkip}
+              className="w-full bg-white text-gray-600 font-medium py-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors"
+            >
+              Skip for now
+            </button>
+          </div>
+        </form>
       </div>
-      
       <ConfirmModal
         isOpen={modalConfig.isOpen}
         title={modalConfig.title}

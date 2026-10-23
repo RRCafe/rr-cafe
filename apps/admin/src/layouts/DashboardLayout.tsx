@@ -2,6 +2,7 @@ import { Outlet, Navigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { LayoutDashboard, UtensilsCrossed, Calculator, Settings as SettingsIcon, LogOut, History, Users } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import rrcafeLogo from '../assets/rrcafe-logo.svg';
 
 export default function DashboardLayout() {
   const { user, loading, isOwner } = useAuth();
@@ -37,9 +38,7 @@ export default function DashboardLayout() {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-20 hover:w-64 transition-all duration-300 ease-in-out bg-white border-r border-gray-200 flex-col overflow-hidden group z-50 h-full">
         <div className="h-16 flex items-center px-6 border-b border-gray-200 shrink-0 whitespace-nowrap">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold shrink-0">
-            RR
-          </div>
+          <img src={rrcafeLogo} alt="RR Cafe" className="w-8 h-8 object-contain shrink-0" />
           <h1 className="text-xl font-bold text-gray-800 ml-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">RR Cafe Admin</h1>
         </div>
         

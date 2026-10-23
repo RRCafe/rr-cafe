@@ -9,6 +9,7 @@ import Orders from './pages/Orders';
 import DeliveryPartners from './pages/DeliveryPartners';
 import DeliveryPartnerDetails from './pages/DeliveryPartnerDetails';
 import Settings from './pages/Settings';
+import OrderReport from './pages/OrderReport';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
             <Route path="menu" element={<MenuManager />} />
             <Route path="billing" element={<Billing />} />
             <Route path="orders" element={<Orders />} />
+            <Route path="orders/report" element={<OrderReport />} />
             <Route path="partners" element={<DeliveryPartners />} />
             <Route path="partners/:id" element={<DeliveryPartnerDetails />} />
             <Route path="settings" element={<Settings />} />
