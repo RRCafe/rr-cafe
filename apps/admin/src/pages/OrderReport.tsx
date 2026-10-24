@@ -219,7 +219,46 @@ export default function OrderReport() {
 
       {/* Filter Bar */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-6">
-        <div className="flex flex-col md:flex-row gap-3 flex-wrap">
+        {/* Mobile: horizontal scrollable chips + compact selects */}
+        <div className="md:hidden">
+          <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
+            {(['today', 'week', 'month', 'custom'] as DateRange[]).map(r => (
+              <button key={r} onClick={() => setDateRange(r)} className={`px-3 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-all ${
+                dateRange === r ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200'
+              }`}>
+                {r === 'today' ? 'Today' : r === 'week' ? 'Week' : r === 'month' ? 'Month' : 'Custom'}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2 mt-2">
+            <select value={orderTypeFilter} onChange={e => setOrderTypeFilter(e.target.value as OrderTypeFilter)}
+              className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none">
+              <option value="all">All Types</option>
+              <option value="dine_in">Dine In</option>
+              <option value="dine_out">Takeaway</option>
+              <option value="delivery">Delivery</option>
+            </select>
+            <select value={sourceFilter} onChange={e => setSourceFilter(e.target.value as SourceFilter)}
+              className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none">
+              <option value="all">All Sources</option>
+              <option value="app">App</option>
+              <option value="pos_manual">POS</option>
+              <option value="zomato">Zomato</option>
+              <option value="swiggy">Swiggy</option>
+            </select>
+          </div>
+          {dateRange === 'custom' && (
+            <div className="flex gap-2 mt-2">
+              <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)}
+                className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm" />
+              <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)}
+                className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm" />
+            </div>
+          )}
+        </div>
+
+        {/* Desktop: original layout */}
+        <div className="hidden md:flex flex-row gap-3 flex-wrap">
           {/* Date Range */}
           <div className="flex gap-1.5 bg-gray-100 p-1 rounded-xl flex-wrap">
             {(['today', 'week', 'month', 'custom'] as DateRange[]).map(r => (
@@ -315,7 +354,80 @@ export default function OrderReport() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      {/* Mobile Breakdown: Compact stat pills */}
+      <div className="md:hidden grid grid-cols-1 gap-4 mb-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <h3 className="font-bold text-gray-700 text-sm mb-3 flex items-center gap-1.5">
+            <ShoppingBag className="w-4 h-4 text-gray-400" /> Order Types
+          </h3>
+          {typeBreakdown.length === 0 ? (
+            <p className="text-gray-400 text-sm text-center py-4">No data</p>
+          ) : (
+            <div className="space-y-2.5">
+              {typeBreakdown.map(({ type, count, revenue }) => {
+                const pct = totalOrders > 0 ? Math.round((count / totalOrders) * 100) : 0;
+                const colors: Record<string, { bg: string; text: string; bar: string }> = {
+                  dine_in: { bg: 'bg-blue-50', text: 'text-blue-700', bar: 'bg-blue-500' },
+                  dine_out: { bg: 'bg-orange-50', text: 'text-orange-700', bar: 'bg-orange-500' },
+                  delivery: { bg: 'bg-green-50', text: 'text-green-700', bar: 'bg-green-500' },
+                };
+                const c = colors[type] || { bg: 'bg-gray-50', text: 'text-gray-600', bar: 'bg-gray-400' };
+                return (
+                  <div key={type} className={`${c.bg} rounded-xl p-3`}>
+                    <div className="flex justify-between items-center">
+                      <span className={`font-bold text-sm ${c.text}`}>{ORDER_TYPE_LABELS[type] || type}</span>
+                      <div className="text-right">
+                        <span className="text-xs font-bold text-gray-700">{formatCurrency(revenue)}</span>
+                        <span className={`ml-2 text-xs font-semibold ${c.text}`}>{count} orders</span>
+                      </div>
+                    </div>
+                    <div className="mt-2 h-1.5 bg-white/60 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${c.bar}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1 text-right">{pct}% of total</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <h3 className="font-bold text-gray-700 text-sm mb-3 flex items-center gap-1.5">
+            <Users className="w-4 h-4 text-gray-400" /> Order Sources
+          </h3>
+          {sourceBreakdown.length === 0 ? (
+            <p className="text-gray-400 text-sm text-center py-4">No data</p>
+          ) : (
+            <div className="space-y-2.5">
+              {sourceBreakdown.map(({ source, count, revenue }, idx) => {
+                const pct = totalOrders > 0 ? Math.round((count / totalOrders) * 100) : 0;
+                const barColors = ['bg-indigo-500', 'bg-purple-500', 'bg-pink-500', 'bg-teal-500'];
+                const bgColors = ['bg-indigo-50', 'bg-purple-50', 'bg-pink-50', 'bg-teal-50'];
+                const textColors = ['text-indigo-700', 'text-purple-700', 'text-pink-700', 'text-teal-700'];
+                const ci = idx % 4;
+                return (
+                  <div key={source} className={`${bgColors[ci]} rounded-xl p-3`}>
+                    <div className="flex justify-between items-center">
+                      <span className={`font-bold text-sm ${textColors[ci]}`}>{SOURCE_LABELS[source] || source}</span>
+                      <div className="text-right">
+                        <span className="text-xs font-bold text-gray-700">{formatCurrency(revenue)}</span>
+                        <span className={`ml-2 text-xs font-semibold ${textColors[ci]}`}>{count}</span>
+                      </div>
+                    </div>
+                    <div className="mt-2 h-1.5 bg-white/60 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${barColors[ci]}`} style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Desktop Breakdown Grid */}
+      <div className="hidden md:grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {/* Order Type Breakdown */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2 text-sm uppercase tracking-wider">
@@ -426,48 +538,77 @@ export default function OrderReport() {
             <p className="font-medium">No orders in selected range</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-gray-50/80 border-b border-gray-100">
-                <tr>
-                  <th className="p-4 font-semibold text-gray-500 text-xs uppercase tracking-wider">Date</th>
-                  <th className="p-4 font-semibold text-gray-500 text-xs uppercase tracking-wider text-center">Orders</th>
-                  <th className="p-4 font-semibold text-gray-500 text-xs uppercase tracking-wider text-right">Revenue</th>
-                  <th className="p-4 font-semibold text-gray-500 text-xs uppercase tracking-wider text-right">Avg Value</th>
-                  <th className="p-4 font-semibold text-gray-500 text-xs uppercase tracking-wider w-40">Revenue Bar</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dailyData.map(day => (
-                  <tr key={day.date} className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors">
-                    <td className="p-4 font-semibold text-gray-800">{formatDate(day.date)}</td>
-                    <td className="p-4 text-center">
-                      <span className="bg-blue-100 text-blue-700 font-bold text-xs px-2.5 py-1 rounded-full">{day.orders}</span>
-                    </td>
-                    <td className="p-4 text-right font-bold text-gray-900">{formatCurrency(day.revenue)}</td>
-                    <td className="p-4 text-right text-gray-500 font-medium text-sm">{formatCurrency(day.orders > 0 ? day.revenue / day.orders : 0)}</td>
-                    <td className="p-4">
-                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden w-full">
-                        <div
-                          className="h-full bg-blue-500 rounded-full"
-                          style={{ width: `${(day.revenue / maxDailyRevenue) * 100}%` }}
-                        />
-                      </div>
-                    </td>
+          <>
+            {/* Mobile Daily Revenue - card list */}
+            <div className="md:hidden space-y-2 p-4">
+              {dailyData.map(day => (
+                <div key={day.date} className="flex items-center gap-3 bg-gray-50 rounded-xl p-3">
+                  <div className="flex-1">
+                    <p className="font-bold text-gray-800 text-sm">{formatDate(day.date)}</p>
+                    <div className="mt-1.5 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-500 rounded-full" style={{ width: `${(day.revenue / maxDailyRevenue) * 100}%` }} />
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-black text-gray-900 text-sm">{formatCurrency(day.revenue)}</p>
+                    <p className="text-xs text-gray-400">{day.orders} orders</p>
+                  </div>
+                </div>
+              ))}
+              {/* Mobile total footer */}
+              <div className="flex justify-between items-center bg-blue-50 rounded-xl p-3 border border-blue-100 mt-2">
+                <span className="font-black text-gray-800">Total</span>
+                <div className="text-right">
+                  <span className="font-black text-blue-700">{formatCurrency(totalRevenue)}</span>
+                  <span className="text-xs text-gray-500 ml-2">{totalOrders} orders</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-gray-50/80 border-b border-gray-100">
+                  <tr>
+                    <th className="p-4 font-semibold text-gray-500 text-xs uppercase tracking-wider">Date</th>
+                    <th className="p-4 font-semibold text-gray-500 text-xs uppercase tracking-wider text-center">Orders</th>
+                    <th className="p-4 font-semibold text-gray-500 text-xs uppercase tracking-wider text-right">Revenue</th>
+                    <th className="p-4 font-semibold text-gray-500 text-xs uppercase tracking-wider text-right">Avg Value</th>
+                    <th className="p-4 font-semibold text-gray-500 text-xs uppercase tracking-wider w-40">Revenue Bar</th>
                   </tr>
-                ))}
-              </tbody>
-              <tfoot className="bg-blue-50/50 border-t-2 border-blue-100">
-                <tr>
-                  <td className="p-4 font-black text-gray-900">Total</td>
-                  <td className="p-4 text-center font-black text-gray-900">{totalOrders}</td>
-                  <td className="p-4 text-right font-black text-blue-700 text-lg">{formatCurrency(totalRevenue)}</td>
-                  <td className="p-4 text-right font-bold text-gray-700">{formatCurrency(avgOrderValue)}</td>
-                  <td className="p-4" />
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {dailyData.map(day => (
+                    <tr key={day.date} className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors">
+                      <td className="p-4 font-semibold text-gray-800">{formatDate(day.date)}</td>
+                      <td className="p-4 text-center">
+                        <span className="bg-blue-100 text-blue-700 font-bold text-xs px-2.5 py-1 rounded-full">{day.orders}</span>
+                      </td>
+                      <td className="p-4 text-right font-bold text-gray-900">{formatCurrency(day.revenue)}</td>
+                      <td className="p-4 text-right text-gray-500 font-medium text-sm">{formatCurrency(day.orders > 0 ? day.revenue / day.orders : 0)}</td>
+                      <td className="p-4">
+                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden w-full">
+                          <div
+                            className="h-full bg-blue-500 rounded-full"
+                            style={{ width: `${(day.revenue / maxDailyRevenue) * 100}%` }}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-blue-50/50 border-t-2 border-blue-100">
+                  <tr>
+                    <td className="p-4 font-black text-gray-900">Total</td>
+                    <td className="p-4 text-center font-black text-gray-900">{totalOrders}</td>
+                    <td className="p-4 text-right font-black text-blue-700 text-lg">{formatCurrency(totalRevenue)}</td>
+                    <td className="p-4 text-right font-bold text-gray-700">{formatCurrency(avgOrderValue)}</td>
+                    <td className="p-4" />
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
@@ -484,57 +625,94 @@ export default function OrderReport() {
             <p className="font-medium">No items sold in selected range</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-gray-50/80 border-b border-gray-100">
-                <tr>
-                  <th className="p-4 font-semibold text-gray-500 text-xs uppercase tracking-wider w-8">#</th>
-                  <th className="p-4 font-semibold text-gray-500 text-xs uppercase tracking-wider">Item Name</th>
-                  <th className="p-4 font-semibold text-gray-500 text-xs uppercase tracking-wider text-center">Qty Sold</th>
-                  <th className="p-4 font-semibold text-gray-500 text-xs uppercase tracking-wider text-right">Revenue</th>
-                  <th className="p-4 font-semibold text-gray-500 text-xs uppercase tracking-wider text-right">% of Total</th>
-                  <th className="p-4 font-semibold text-gray-500 text-xs uppercase tracking-wider w-40">Popularity</th>
-                </tr>
-              </thead>
-              <tbody>
-                {itemSales.map((item, idx) => {
-                  const pct = totalRevenue > 0 ? ((item.revenue / totalRevenue) * 100).toFixed(1) : '0.0';
-                  const barPct = (item.revenue / maxItemRevenue) * 100;
-                  const isMostSelling = idx === 0;
-                  const isLeastSelling = idx === itemSales.length - 1 && itemSales.length > 1;
-                  return (
-                    <tr key={item.name} className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors">
-                      <td className="p-4 text-gray-400 text-sm font-bold">{idx + 1}</td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-gray-800">{item.name}</span>
-                          {isMostSelling && (
-                            <span className="text-[10px] font-bold bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full uppercase tracking-wide">🔥 Top</span>
-                          )}
-                          {isLeastSelling && (
-                            <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full uppercase tracking-wide">Least</span>
-                          )}
+          <>
+            {/* Mobile Item Sales - ranked cards */}
+            <div className="md:hidden space-y-2 p-4">
+              {itemSales.map((item, idx) => {
+                const pct = totalRevenue > 0 ? ((item.revenue / totalRevenue) * 100).toFixed(1) : '0.0';
+                const barPct = (item.revenue / maxItemRevenue) * 100;
+                const isMostSelling = idx === 0;
+                const isLeastSelling = idx === itemSales.length - 1 && itemSales.length > 1;
+                return (
+                  <div key={item.name} className={`rounded-xl p-3 border ${isMostSelling ? 'bg-orange-50 border-orange-100' : 'bg-gray-50 border-gray-100'}`}>
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <span className="text-gray-400 font-bold text-sm w-5 shrink-0">#{idx + 1}</span>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-gray-800 text-sm truncate">{item.name}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">{item.qty} units sold</p>
                         </div>
-                      </td>
-                      <td className="p-4 text-center">
-                        <span className="font-bold text-gray-700">{item.qty}</span>
-                      </td>
-                      <td className="p-4 text-right font-bold text-gray-900">{formatCurrency(item.revenue)}</td>
-                      <td className="p-4 text-right text-gray-500 font-semibold text-sm">{pct}%</td>
-                      <td className="p-4">
-                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${isMostSelling ? 'bg-orange-400' : 'bg-blue-400'}`}
-                            style={{ width: `${barPct}%` }}
-                          />
+                      </div>
+                      <div className="text-right shrink-0 ml-2">
+                        <p className="font-black text-gray-900 text-sm">{formatCurrency(item.revenue)}</p>
+                        <div className="flex items-center justify-end gap-1 mt-0.5">
+                          {isMostSelling && <span className="text-[10px] font-bold bg-orange-200 text-orange-700 px-1.5 py-0.5 rounded-full">🔥 Top</span>}
+                          {isLeastSelling && <span className="text-[10px] font-bold bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full">Least</span>}
+                          <span className="text-[10px] text-gray-400 font-medium">{pct}%</span>
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                    </div>
+                    <div className="mt-2 h-1 bg-gray-200 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${isMostSelling ? 'bg-orange-400' : 'bg-blue-400'}`} style={{ width: `${barPct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-gray-50/80 border-b border-gray-100">
+                  <tr>
+                    <th className="p-4 font-semibold text-gray-500 text-xs uppercase tracking-wider w-8">#</th>
+                    <th className="p-4 font-semibold text-gray-500 text-xs uppercase tracking-wider">Item Name</th>
+                    <th className="p-4 font-semibold text-gray-500 text-xs uppercase tracking-wider text-center">Qty Sold</th>
+                    <th className="p-4 font-semibold text-gray-500 text-xs uppercase tracking-wider text-right">Revenue</th>
+                    <th className="p-4 font-semibold text-gray-500 text-xs uppercase tracking-wider text-right">% of Total</th>
+                    <th className="p-4 font-semibold text-gray-500 text-xs uppercase tracking-wider w-40">Popularity</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {itemSales.map((item, idx) => {
+                    const pct = totalRevenue > 0 ? ((item.revenue / totalRevenue) * 100).toFixed(1) : '0.0';
+                    const barPct = (item.revenue / maxItemRevenue) * 100;
+                    const isMostSelling = idx === 0;
+                    const isLeastSelling = idx === itemSales.length - 1 && itemSales.length > 1;
+                    return (
+                      <tr key={item.name} className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors">
+                        <td className="p-4 text-gray-400 text-sm font-bold">{idx + 1}</td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-gray-800">{item.name}</span>
+                            {isMostSelling && (
+                              <span className="text-[10px] font-bold bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full uppercase tracking-wide">🔥 Top</span>
+                            )}
+                            {isLeastSelling && (
+                              <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full uppercase tracking-wide">Least</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-4 text-center">
+                          <span className="font-bold text-gray-700">{item.qty}</span>
+                        </td>
+                        <td className="p-4 text-right font-bold text-gray-900">{formatCurrency(item.revenue)}</td>
+                        <td className="p-4 text-right text-gray-500 font-semibold text-sm">{pct}%</td>
+                        <td className="p-4">
+                          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${isMostSelling ? 'bg-orange-400' : 'bg-blue-400'}`}
+                              style={{ width: `${barPct}%` }}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>

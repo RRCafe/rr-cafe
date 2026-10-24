@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { Calculator, Plus, Minus, Check, Receipt, Trash2, Search, ShoppingBag, Banknote, QrCode, Utensils, X } from 'lucide-react';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { ReceiptModal } from '../components/ReceiptModal';
 
 interface MenuItem {
   id: string;
@@ -28,6 +29,7 @@ export default function Billing() {
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'direct_qr'>('cash');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', isError: false });
+  const [showReceipt, setShowReceipt] = useState(false);
   const [pricingConfig, setPricingConfig] = useState<PricingConfig | null>(null);
   
   // Combobox state
@@ -432,7 +434,7 @@ export default function Billing() {
             </div>
             
             <button
-              onClick={handleCompleteOrder}
+              onClick={() => { if (cart.length > 0) setShowReceipt(true); }}
               disabled={isSubmitting || cart.length === 0}
               className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
                 cart.length === 0 
@@ -466,6 +468,23 @@ export default function Billing() {
         confirmText={modalConfig.isError ? "OK" : "Confirm"}
         isDestructive={modalConfig.isError}
       />
+
+      {showReceipt && (
+        <ReceiptModal
+          cart={cart}
+          total={total}
+          packagingFee={packagingFee}
+          grandTotal={grandTotal}
+          orderType={orderType}
+          paymentMethod={paymentMethod}
+          onConfirm={async () => {
+            await handleCompleteOrder();
+            setShowReceipt(false);
+          }}
+          onClose={() => setShowReceipt(false)}
+          isSubmitting={isSubmitting}
+        />
+      )}
     </div>
   );
 }
