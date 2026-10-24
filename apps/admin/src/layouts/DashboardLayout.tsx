@@ -34,7 +34,7 @@ export default function DashboardLayout() {
   ];
 
   return (
-    <div className="min-h-[100dvh] bg-gray-100 flex flex-col md:flex-row pb-16 md:pb-0">
+    <div className="min-h-[100dvh] bg-gray-100 flex flex-col md:flex-row pb-[calc(4rem+env(safe-area-inset-bottom,0px))] md:pb-0">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-20 hover:w-64 transition-all duration-300 ease-in-out bg-white border-r border-gray-200 flex-col overflow-hidden group z-50 h-full">
         <div className="h-16 flex items-center px-6 border-b border-gray-200 shrink-0 whitespace-nowrap">
@@ -83,7 +83,7 @@ export default function DashboardLayout() {
       </main>
 
       {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 w-full bg-white border-t border-gray-200 flex items-center justify-around z-40 h-16 px-2 ">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 w-full bg-white border-t border-gray-200 flex items-center justify-around z-40 px-2" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)", height: "calc(4rem + env(safe-area-inset-bottom, 0px))" }}>
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
@@ -103,3 +103,5 @@ export default function DashboardLayout() {
     </div>
   );
 }
+
+

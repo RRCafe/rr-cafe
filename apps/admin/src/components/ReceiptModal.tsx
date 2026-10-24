@@ -78,38 +78,62 @@ export function ReceiptModal({ data, onClose }: ReceiptModalProps) {
   const generatePdf = async () => {
     if (!receiptRef.current) return null;
     const element = receiptRef.current;
+    const zoomContainer = document.getElementById('receipt-zoom-container');
 
-    // Use html2canvas with exact fixed width cloning for pixel-perfect column alignment
-    const canvas = await html2canvas(element, {
-      scale: 3,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-      onclone: (clonedDoc) => {
-        const target = clonedDoc.querySelector('.receipt-container') as HTMLElement;
-        if (target) {
-          target.style.width = '220px';
-          target.style.maxWidth = '220px';
-          target.style.boxShadow = 'none';
-          target.style.margin = '0 auto';
-          target.style.padding = '15px';
-        }
-      },
-    });
+    const prevTransform = zoomContainer ? zoomContainer.style.transform : '';
+    const prevMargin = zoomContainer ? zoomContainer.style.marginBottom : '';
+    if (zoomContainer) {
+      zoomContainer.style.transform = 'none';
+      zoomContainer.style.marginBottom = '0px';
+    }
 
-    const pdfWidthMm = 58;
-    const pdfHeightMm = (canvas.height * pdfWidthMm) / canvas.width;
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: [pdfWidthMm, pdfHeightMm],
-      compress: true,
-    });
+    try {
+      if (document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
 
-    const imgData = canvas.toDataURL('image/png', 1.0);
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidthMm, pdfHeightMm, undefined, 'FAST');
-    return pdf;
+      // Ensure all images are fully loaded
+      const imgs = Array.from(element.querySelectorAll('img'));
+      await Promise.all(
+        imgs.map(
+          img =>
+            new Promise<void>(resolve => {
+              if (img.complete && img.naturalWidth !== 0) resolve();
+              else {
+                img.onload = () => resolve();
+                img.onerror = () => resolve();
+              }
+            })
+        )
+      );
+
+      // Render directly with html2canvas preserving exact CSS and paddings
+      const canvas = await html2canvas(element, {
+        scale: 3,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+      });
+
+      const pdfWidthMm = 58;
+      const pdfHeightMm = (canvas.height * pdfWidthMm) / canvas.width;
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: [pdfWidthMm, pdfHeightMm],
+        compress: true,
+      });
+
+      const imgData = canvas.toDataURL('image/png', 1.0);
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidthMm, pdfHeightMm, undefined, 'FAST');
+      return pdf;
+    } finally {
+      if (zoomContainer) {
+        zoomContainer.style.transform = prevTransform;
+        zoomContainer.style.marginBottom = prevMargin;
+      }
+    }
   };
 
   // Generate raw ESC/POS bytes for thermal printers
@@ -489,7 +513,7 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
 
   return (
     <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 md:p-6 z-[80] overflow-y-auto">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm flex flex-col my-auto max-h-[95vh] overflow-hidden border border-gray-100">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm sm:max-w-md flex flex-col my-auto max-h-[95vh] overflow-hidden border border-gray-100">
         {/* Modal Header */}
         <div className="flex items-center justify-between p-4 px-5 border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-2">
@@ -517,24 +541,34 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
           </div>
         )}
 
-        {/* Receipt Preview Area - Exact receipt.html styling */}
-        <div className="flex-1 overflow-y-auto p-4 bg-[#e0e0e0] flex justify-center items-start">
-          <div
-            ref={receiptRef}
-            className="receipt-container"
-            style={{
-              width: '58mm',
-              maxWidth: '58mm',
-              backgroundColor: '#fff',
-              padding: '4mm',
-              boxSizing: 'border-box',
-              fontFamily: "'Courier New', Courier, monospace",
-              fontSize: '10px',
-              color: '#000',
-              lineHeight: 1.2,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-            }}
-          >
+        {/* Receipt Preview Area - Scaled to fit 80% of popup without modifying 58mm base size */}
+        <div className="flex-1 overflow-y-auto p-4 bg-[#e8e6e1] flex flex-col items-center">
+          <div className="w-full flex justify-center">
+            <div
+              id="receipt-zoom-container"
+              style={{
+                transform: 'scale(1.28)',
+                transformOrigin: 'top center',
+                marginBottom: '55px',
+              }}
+            >
+              <div
+                ref={receiptRef}
+                className="receipt-container"
+                style={{
+                  width: '58mm',
+                  minWidth: '58mm',
+                  maxWidth: '58mm',
+                  backgroundColor: '#fff',
+                  padding: '4mm',
+                  boxSizing: 'border-box',
+                  fontFamily: "'Courier New', Courier, monospace",
+                  fontSize: '10px',
+                  color: '#000',
+                  lineHeight: 1.2,
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.15)',
+                }}
+              >
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '1px', marginBottom: '4px' }}>
               <img
@@ -658,6 +692,8 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
             {/* Footer */}
             <div style={{ textAlign: 'center', fontSize: '11px', marginTop: '6px' }}>
               Thank You! Visit us again :)
+            </div>
+          </div>
             </div>
           </div>
         </div>

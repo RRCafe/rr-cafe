@@ -1,13 +1,18 @@
 package com.rrcafe.admin;
 
 import android.content.Context;
+import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.print.PrintAttributes;
 import android.print.PrintDocumentAdapter;
 import android.print.PrintManager;
+import android.view.Window;
+import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.getcapacitor.BridgeActivity;
 
@@ -15,6 +20,23 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        Window window = getWindow();
+        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+        
+        // Match top status bar to app theme (#F5EEDC)
+        window.setStatusBarColor(Color.parseColor("#F5EEDC"));
+        
+        // Match bottom navigation bar to bottom nav bar (#FFFFFF)
+        window.setNavigationBarColor(Color.parseColor("#FFFFFF"));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.setNavigationBarContrastEnforced(false);
+        }
+
+        WindowInsetsControllerCompat insetsController = new WindowInsetsControllerCompat(window, window.getDecorView());
+        insetsController.setAppearanceLightStatusBars(true);
+        insetsController.setAppearanceLightNavigationBars(true);
 
         WebView webView = getBridge().getWebView();
         if (webView != null) {
@@ -28,7 +50,6 @@ public class MainActivity extends BridgeActivity {
                 if (wv != null) {
                     wv.reload();
                 }
-                // Stop the refreshing animation after a short delay
                 swipeRefresh.postDelayed(() -> swipeRefresh.setRefreshing(false), 1000);
             });
         }
