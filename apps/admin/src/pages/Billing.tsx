@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { Calculator, Plus, Minus, Check, Receipt, Trash2, Search, ShoppingBag, Banknote, QrCode, Utensils, X } from 'lucide-react';
 import { ConfirmModal } from '../components/ConfirmModal';
-import { ReceiptModal } from '../components/ReceiptModal';
+import { ReceiptModal, type ReceiptData } from '../components/ReceiptModal';
 
 interface MenuItem {
   id: string;
@@ -30,6 +30,7 @@ export default function Billing() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', isError: false });
   const [showReceipt, setShowReceipt] = useState(false);
+  const [completedReceiptData, setCompletedReceiptData] = useState<ReceiptData | null>(null);
   const [pricingConfig, setPricingConfig] = useState<PricingConfig | null>(null);
   
   // Combobox state
@@ -136,7 +137,8 @@ export default function Billing() {
         .insert({
           status: 'delivered',
           order_type: orderType,
-          grand_total: grandTotal, items_subtotal: total,
+          grand_total: grandTotal,
+          items_subtotal: total,
           business_type: cart[0]?.business_type || 'RR Cafe',
           source: 'pos_manual'
         })
@@ -165,11 +167,36 @@ export default function Billing() {
       });
       if (paymentError) throw paymentError;
 
-      setModalConfig({ isOpen: true, title: 'Success', message: 'Order completed successfully!', isError: false });
+      // Format Order ID for display (matches receipt.html #AB850CAD format)
+      const orderIdDisplay = orderData.order_number 
+        ? `#${orderData.order_number}` 
+        : `#${orderData.id.slice(0, 8).toUpperCase()}`;
+
+      // Set receipt data with the created order ID and details
+      setCompletedReceiptData({
+        orderId: orderIdDisplay,
+        createdAt: orderData.created_at || new Date().toISOString(),
+        orderType,
+        paymentMethod,
+        items: cart.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity
+        })),
+        total,
+        packagingFee,
+        grandTotal,
+        totalItems
+      });
+
+      // Clear the cart for the next order
       setCart([]);
-    } catch (err) {
+      // Open the receipt modal with the newly completed order details
+      setShowReceipt(true);
+    } catch (err: any) {
       console.error(err);
-      setModalConfig({ isOpen: true, title: 'Error', message: 'Error completing order', isError: true });
+      setModalConfig({ isOpen: true, title: 'Error', message: 'Error completing order: ' + (err.message || 'Unknown error'), isError: true });
     } finally {
       setIsSubmitting(false);
     }
@@ -434,7 +461,7 @@ export default function Billing() {
             </div>
             
             <button
-              onClick={() => { if (cart.length > 0) setShowReceipt(true); }}
+              onClick={handleCompleteOrder}
               disabled={isSubmitting || cart.length === 0}
               className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
                 cart.length === 0 
@@ -445,11 +472,14 @@ export default function Billing() {
               }`}
             >
               {isSubmitting ? (
-                <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <>
+                  <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Processing Order...</span>
+                </>
               ) : (
                 <>
                   <Check className="w-6 h-6" />
-                  {cart.length === 0 ? 'Add Items to Bill' : 'Checkout'}
+                  <span>{cart.length === 0 ? 'Add Items to Bill' : 'Checkout & Print'}</span>
                 </>
               )}
             </button>
@@ -469,20 +499,13 @@ export default function Billing() {
         isDestructive={modalConfig.isError}
       />
 
-      {showReceipt && (
+      {showReceipt && completedReceiptData && (
         <ReceiptModal
-          cart={cart}
-          total={total}
-          packagingFee={packagingFee}
-          grandTotal={grandTotal}
-          orderType={orderType}
-          paymentMethod={paymentMethod}
-          onConfirm={async () => {
-            await handleCompleteOrder();
+          data={completedReceiptData}
+          onClose={() => {
             setShowReceipt(false);
+            setCompletedReceiptData(null);
           }}
-          onClose={() => setShowReceipt(false)}
-          isSubmitting={isSubmitting}
         />
       )}
     </div>
