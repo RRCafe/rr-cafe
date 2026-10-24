@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { X, Printer, Download, Bluetooth, CheckCircle2, Loader2 } from 'lucide-react';
+import { X, Printer, Download, CheckCircle2, Loader2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import rrcafeLogo from '../assets/rrcafe-logo.svg';
@@ -27,6 +27,10 @@ interface ReceiptModalProps {
   data: ReceiptData;
   onClose: () => void;
 }
+
+// Global Bluetooth printer device cache so user only selects once per session
+let cachedBtDevice: any = null;
+let cachedBtCharacteristic: any = null;
 
 function formatReceiptDate(isoStr: string) {
   const d = new Date(isoStr);
@@ -62,48 +66,247 @@ function getPaymentMethodDisplay(method: string) {
 export function ReceiptModal({ data, onClose }: ReceiptModalProps) {
   const receiptRef = useRef<HTMLDivElement>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const [bluetoothStatus, setBluetoothStatus] = useState<string | null>(null);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [printStatus, setPrintStatus] = useState<string | null>(null);
 
   const dateStr = formatReceiptDate(data.createdAt);
   const timeStr = formatReceiptTime(data.createdAt);
   const orderTypeStr = getOrderTypeDisplay(data.orderType);
   const paymentMethodStr = getPaymentMethodDisplay(data.paymentMethod);
 
-  // Generate 58mm PDF blob
-  const generate58mmPdf = async () => {
+  // High-accuracy 58mm PDF generator preserving exact alignment
+  const generatePdf = async () => {
     if (!receiptRef.current) return null;
     const element = receiptRef.current;
+
+    // Use html2canvas with exact fixed width cloning for pixel-perfect column alignment
     const canvas = await html2canvas(element, {
       scale: 3,
       useCORS: true,
+      allowTaint: true,
       backgroundColor: '#ffffff',
       logging: false,
+      onclone: (clonedDoc) => {
+        const target = clonedDoc.querySelector('.receipt-container') as HTMLElement;
+        if (target) {
+          target.style.width = '220px';
+          target.style.maxWidth = '220px';
+          target.style.boxShadow = 'none';
+          target.style.margin = '0 auto';
+          target.style.padding = '15px';
+        }
+      },
     });
 
-    const imgWidthMm = 58;
-    const imgHeightMm = (canvas.height * imgWidthMm) / canvas.width;
+    const pdfWidthMm = 58;
+    const pdfHeightMm = (canvas.height * pdfWidthMm) / canvas.width;
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
-      format: [imgWidthMm, imgHeightMm],
+      format: [pdfWidthMm, pdfHeightMm],
+      compress: true,
     });
 
-    const imgData = canvas.toDataURL('image/png');
-    pdf.addImage(imgData, 'PNG', 0, 0, imgWidthMm, imgHeightMm);
-    return { pdf, imgHeightMm };
+    const imgData = canvas.toDataURL('image/png', 1.0);
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidthMm, pdfHeightMm, undefined, 'FAST');
+    return pdf;
   };
 
-  // 1. System & 58mm Thermal Print handler
-  const handlePrint = async () => {
-    // If inside Android App with AndroidPrinter bridge
-    const androidPrinter = (window as any).AndroidPrinter;
-    if (androidPrinter && typeof androidPrinter.printReceiptHtml === 'function') {
-      const receiptHtml = getPrintHtml();
-      androidPrinter.printReceiptHtml(receiptHtml);
-      return;
+  // Generate raw ESC/POS bytes for thermal printers
+  const generateEscPosData = () => {
+    const encoder = new TextEncoder();
+    const bytes: number[] = [];
+
+    const append = (str: string) => {
+      const encoded = encoder.encode(str);
+      for (let i = 0; i < encoded.length; i++) bytes.push(encoded[i]);
+    };
+
+    // ESC @ - Init
+    bytes.push(0x1b, 0x40);
+
+    // ESC a 1 - Center align
+    bytes.push(0x1b, 0x61, 0x01);
+    // Double height/width for title
+    bytes.push(0x1d, 0x21, 0x11);
+    append('RR CAFE\n');
+    bytes.push(0x1d, 0x21, 0x00);
+    append('Victoria Rd, Kulasekharapatnam - 628206\n');
+    append('Phone no: 9003244241\n');
+    append('--------------------------------\n');
+
+    // ESC a 0 - Left align
+    bytes.push(0x1b, 0x61, 0x00);
+    append(`Order: ${data.orderId}\n`);
+    append(`Date: ${dateStr}  ${timeStr}\n`);
+    append(`Type: ${orderTypeStr} | ${paymentMethodStr}\n`);
+    append('--------------------------------\n');
+    append('ITEM              QTY        AMT\n');
+    append('--------------------------------\n');
+
+    data.items.forEach(item => {
+      const name = item.name.length > 14 ? item.name.substring(0, 14) : item.name.padEnd(14);
+      const qty = `${item.quantity}x`.padStart(5);
+      const amt = `Rs.${(item.price * item.quantity).toFixed(2)}`.padStart(11);
+      append(`${name}${qty}${amt}\n`);
+    });
+
+    append('--------------------------------\n');
+    append(`Items: ${data.totalItems}`.padEnd(16) + `Subtotal: Rs.${data.total.toFixed(2)}`.padStart(16) + '\n');
+    if (data.packagingFee > 0) {
+      append(`Packaging Fee`.padEnd(16) + `Rs.${data.packagingFee.toFixed(2)}`.padStart(16) + '\n');
+    }
+    append('================================\n');
+
+    // ESC a 1 - Center
+    bytes.push(0x1b, 0x61, 0x01);
+    bytes.push(0x1d, 0x21, 0x01);
+    append(`TOTAL: Rs.${data.grandTotal.toFixed(2)}\n`);
+    bytes.push(0x1d, 0x21, 0x00);
+    append('================================\n');
+    append('Thank You! Visit us again :)\n\n\n\n');
+
+    // GS V 66 0 - Paper cut
+    bytes.push(0x1d, 0x56, 0x42, 0x00);
+
+    return new Uint8Array(bytes);
+  };
+
+  // Direct Bluetooth Printer sender
+  const printViaBluetooth = async (): Promise<boolean> => {
+    const nav = navigator as any;
+    if (!nav.bluetooth) return false;
+
+    let device = cachedBtDevice;
+    let writeChar = cachedBtCharacteristic;
+
+    // Check if cached device is still connected
+    if (device && device.gatt && !device.gatt.connected) {
+      try {
+        setPrintStatus('Reconnecting to printer...');
+        const server = await device.gatt.connect();
+        writeChar = await findWritableCharacteristic(server);
+        cachedBtCharacteristic = writeChar;
+      } catch {
+        device = null;
+        writeChar = null;
+        cachedBtDevice = null;
+        cachedBtCharacteristic = null;
+      }
     }
 
-    // Direct 58mm print via hidden iframe with exact @page size
+    // If no active cached device, request one
+    if (!device || !writeChar) {
+      setPrintStatus('Selecting Bluetooth printer...');
+      device = await nav.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: [
+          '000018f0-0000-1000-8000-00805f9b34fb',
+          '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+          'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
+          '0000ff00-0000-1000-8000-00805f9b34fb',
+        ],
+      });
+
+      setPrintStatus('Connecting to printer...');
+      const server = await device.gatt?.connect();
+      if (!server) throw new Error('Could not connect to GATT server');
+
+      writeChar = await findWritableCharacteristic(server);
+      if (!writeChar) throw new Error('No writable characteristic found');
+
+      // Cache device and characteristic for subsequent one-click prints
+      cachedBtDevice = device;
+      cachedBtCharacteristic = writeChar;
+      try {
+        localStorage.setItem('rr_last_printer_name', device.name || 'Thermal Printer');
+      } catch {
+        // ignore
+      }
+    }
+
+    setPrintStatus('Sending receipt to printer...');
+    const escPosBytes = generateEscPosData();
+    const chunkSize = 100;
+    for (let i = 0; i < escPosBytes.length; i += chunkSize) {
+      const chunk = escPosBytes.slice(i, i + chunkSize);
+      if (writeChar.properties.writeWithoutResponse) {
+        await writeChar.writeValueWithoutResponse(chunk);
+      } else {
+        await writeChar.writeValue(chunk);
+      }
+    }
+
+    setPrintStatus('Printed successfully!');
+    setTimeout(() => setPrintStatus(null), 2500);
+    return true;
+  };
+
+  const findWritableCharacteristic = async (server: any) => {
+    const services = await server.getPrimaryServices();
+    for (const service of services) {
+      try {
+        const chars = await service.getCharacteristics();
+        for (const c of chars) {
+          if (c.properties.write || c.properties.writeWithoutResponse) {
+            return c;
+          }
+        }
+      } catch {
+        // continue
+      }
+    }
+    return null;
+  };
+
+  // Unified Print Action
+  const handlePrint = async () => {
+    setIsPrinting(true);
+    setPrintStatus('Preparing print...');
+
+    try {
+      // 1. If Web Bluetooth is available, try Bluetooth direct print first
+      if ((navigator as any).bluetooth) {
+        try {
+          const success = await printViaBluetooth();
+          if (success) {
+            setIsPrinting(false);
+            return;
+          }
+        } catch (btErr: any) {
+          console.warn('Bluetooth print skipped or cancelled:', btErr);
+          // If user cancelled device picker, don't force fallback immediately unless requested
+          if (btErr.name === 'NotFoundError') {
+            setIsPrinting(false);
+            setPrintStatus(null);
+            return;
+          }
+        }
+      }
+
+      // 2. If inside Android Capacitor APK, use native Android PrintManager bridge
+      const androidPrinter = (window as any).AndroidPrinter;
+      if (androidPrinter && typeof androidPrinter.printReceiptHtml === 'function') {
+        setPrintStatus('Opening Android print spooler...');
+        androidPrinter.printReceiptHtml(getPrintHtml());
+        setIsPrinting(false);
+        setPrintStatus(null);
+        return;
+      }
+
+      // 3. Fallback: browser isolated print iframe with exact dimensions
+      setPrintStatus('Opening print dialogue...');
+      printViaIframe();
+    } catch (err: any) {
+      console.error('Print error:', err);
+      setPrintStatus('Print error: ' + (err.message || 'Unknown error'));
+      setTimeout(() => setPrintStatus(null), 3000);
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
+  const printViaIframe = () => {
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
     iframe.style.right = '0';
@@ -138,13 +341,13 @@ export function ReceiptModal({ data, onClose }: ReceiptModalProps) {
     };
   };
 
-  // 2. Download 58mm PDF
+  // Download PDF
   const handleDownloadPdf = async () => {
     setIsGeneratingPdf(true);
     try {
-      const res = await generate58mmPdf();
-      if (res) {
-        res.pdf.save(`Receipt-${data.orderId.replace('#', '')}.pdf`);
+      const pdf = await generatePdf();
+      if (pdf) {
+        pdf.save(`Receipt-${data.orderId.replace('#', '')}.pdf`);
       }
     } catch (err) {
       console.error('Failed to generate PDF:', err);
@@ -153,145 +356,19 @@ export function ReceiptModal({ data, onClose }: ReceiptModalProps) {
     }
   };
 
-  // 3. Direct Bluetooth Thermal Printer (ESC/POS)
-  const handleBluetoothPrint = async () => {
-    const nav = navigator as any;
-    if (!nav.bluetooth) {
-      setBluetoothStatus('Bluetooth not supported in this browser. Use "Print (58mm)".');
-      setTimeout(() => setBluetoothStatus(null), 4000);
-      return;
-    }
-
-    try {
-      setBluetoothStatus('Connecting to Bluetooth printer...');
-      // Request device with standard serial / thermal printer service UUIDs
-      const device = await nav.bluetooth.requestDevice({
-        acceptAllDevices: true,
-        optionalServices: [
-          '000018f0-0000-1000-8000-00805f9b34fb',
-          '49535343-fe7d-4ae5-8fa9-9fafd205e455',
-          'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
-          '0000ff00-0000-1000-8000-00805f9b34fb',
-        ],
-      });
-
-      const server = await device.gatt?.connect();
-      if (!server) throw new Error('Could not connect to GATT server');
-
-      // Find writable characteristic
-      const services = await server.getPrimaryServices();
-      let writeChar: any = null;
-      for (const service of services) {
-        try {
-          const chars = await service.getCharacteristics();
-          for (const c of chars) {
-            if (c.properties.write || c.properties.writeWithoutResponse) {
-              writeChar = c;
-              break;
-            }
-          }
-        } catch {
-          // continue
-        }
-        if (writeChar) break;
-      }
-
-      if (!writeChar) {
-        throw new Error('No writable characteristic found on printer');
-      }
-
-      setBluetoothStatus('Printing...');
-      const escPosBytes = generateEscPosData();
-      // Send in 100-byte chunks
-      const chunkSize = 100;
-      for (let i = 0; i < escPosBytes.length; i += chunkSize) {
-        const chunk = escPosBytes.slice(i, i + chunkSize);
-        if (writeChar.properties.writeWithoutResponse) {
-          await writeChar.writeValueWithoutResponse(chunk);
-        } else {
-          await writeChar.writeValue(chunk);
-        }
-      }
-
-      setBluetoothStatus('Printed successfully!');
-      setTimeout(() => setBluetoothStatus(null), 3000);
-    } catch (err: any) {
-      console.warn('Bluetooth print cancelled or error:', err);
-      setBluetoothStatus(err.message || 'Bluetooth connection failed');
-      setTimeout(() => setBluetoothStatus(null), 4000);
-    }
-  };
-
-  // ESC/POS raw bytes for 58mm printer
-  const generateEscPosData = () => {
-    const encoder = new TextEncoder();
-    const bytes: number[] = [];
-
-    const append = (str: string) => {
-      const encoded = encoder.encode(str);
-      for (let i = 0; i < encoded.length; i++) bytes.push(encoded[i]);
-    };
-
-    // ESC @ - Init
-    bytes.push(0x1b, 0x40);
-
-    // ESC a 1 - Center align
-    bytes.push(0x1b, 0x61, 0x01);
-    // Double height/width for title
-    bytes.push(0x1d, 0x21, 0x11);
-    append('RR CAFE\n');
-    bytes.push(0x1d, 0x21, 0x00); // Normal text
-    append('Victoria Rd, Kulasekharapatnam - 628206\n');
-    append('Phone no: 9003244241\n');
-    append('--------------------------------\n');
-
-    // ESC a 0 - Left align
-    bytes.push(0x1b, 0x61, 0x00);
-    append(`Order: ${data.orderId}\n`);
-    append(`Date: ${dateStr}  ${timeStr}\n`);
-    append(`Type: ${orderTypeStr} | ${paymentMethodStr}\n`);
-    append('--------------------------------\n');
-    append('ITEM              QTY        AMT\n');
-    append('--------------------------------\n');
-
-    data.items.forEach(item => {
-      const name = item.name.length > 14 ? item.name.substring(0, 14) : item.name.padEnd(14);
-      const qty = `${item.quantity}x`.padStart(5);
-      const amt = `Rs.${(item.price * item.quantity).toFixed(2)}`.padStart(11);
-      append(`${name}${qty}${amt}\n`);
-    });
-
-    append('--------------------------------\n');
-    append(`Items: ${data.totalItems}`.padEnd(16) + `Subtotal: Rs.${data.total.toFixed(2)}`.padStart(16) + '\n');
-    if (data.packagingFee > 0) {
-      append(`Packaging Fee`.padEnd(16) + `Rs.${data.packagingFee.toFixed(2)}`.padStart(16) + '\n');
-    }
-    append('================================\n');
-
-    // ESC a 1 - Center
-    bytes.push(0x1b, 0x61, 0x01);
-    // Double size for total
-    bytes.push(0x1d, 0x21, 0x01);
-    append(`TOTAL: Rs.${data.grandTotal.toFixed(2)}\n`);
-    bytes.push(0x1d, 0x21, 0x00);
-    append('================================\n');
-    append('Thank You! Visit us again :)\n\n\n\n');
-
-    // GS V 66 0 - Paper cut (or feed)
-    bytes.push(0x1d, 0x56, 0x42, 0x00);
-
-    return new Uint8Array(bytes);
-  };
-
   // Exact HTML and CSS from user's receipt.html
   const getPrintHtml = () => {
-    const itemsHtml = data.items.map(item => `
+    const itemsHtml = data.items
+      .map(
+        item => `
       <tr>
         <td class="col-item">${item.name}</td>
         <td class="col-qty">${item.quantity}x ₹${item.price}</td>
         <td class="col-amt">₹${(item.price * item.quantity).toFixed(2)}</td>
       </tr>
-    `).join('');
+    `
+      )
+      .join('');
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -385,11 +462,15 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
             <span>Items: ${data.totalItems}</span>
             <span>Subtotal: ₹${data.total.toFixed(2)}</span>
         </div>
-        ${data.packagingFee > 0 ? `
+        ${
+          data.packagingFee > 0
+            ? `
         <div class="summary-row">
             <span>Packaging Fee</span>
             <span>₹${data.packagingFee.toFixed(2)}</span>
-        </div>` : ''}
+        </div>`
+            : ''
+        }
 
         <div class="divider-solid"></div>
         <div class="total-row">
@@ -409,7 +490,6 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
   return (
     <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 md:p-6 z-[80] overflow-y-auto">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm flex flex-col my-auto max-h-[95vh] overflow-hidden border border-gray-100">
-        
         {/* Modal Header */}
         <div className="flex items-center justify-between p-4 px-5 border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-2">
@@ -418,7 +498,7 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
             </div>
             <div>
               <h3 className="font-black text-gray-900 text-base leading-tight">Order Confirmed</h3>
-              <p className="text-xs text-gray-500 font-semibold">{data.orderId} • 58mm Thermal</p>
+              <p className="text-xs text-gray-500 font-semibold">{data.orderId}</p>
             </div>
           </div>
           <button
@@ -430,10 +510,10 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
           </button>
         </div>
 
-        {/* Status Message (if Bluetooth active) */}
-        {bluetoothStatus && (
-          <div className="bg-blue-50 text-blue-700 px-4 py-2 text-xs font-semibold text-center border-b border-blue-100">
-            {bluetoothStatus}
+        {/* Status Message (e.g. connecting/printing feedback) */}
+        {printStatus && (
+          <div className="bg-blue-50 text-blue-700 px-4 py-2 text-xs font-semibold text-center border-b border-blue-100 animate-pulse">
+            {printStatus}
           </div>
         )}
 
@@ -498,13 +578,38 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
             <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', margin: '4px 0' }}>
               <thead>
                 <tr>
-                  <th style={{ width: '45%', wordWrap: 'break-word', borderBottom: '1px dashed #000', padding: '4px 3px', paddingBottom: '4px', textAlign: 'left' }}>
+                  <th
+                    style={{
+                      width: '45%',
+                      wordWrap: 'break-word',
+                      borderBottom: '1px dashed #000',
+                      padding: '4px 3px',
+                      paddingBottom: '4px',
+                      textAlign: 'left',
+                    }}
+                  >
                     ITEM
                   </th>
-                  <th style={{ width: '30%', borderBottom: '1px dashed #000', padding: '4px 3px', paddingBottom: '4px', textAlign: 'center' }}>
+                  <th
+                    style={{
+                      width: '30%',
+                      borderBottom: '1px dashed #000',
+                      padding: '4px 3px',
+                      paddingBottom: '4px',
+                      textAlign: 'center',
+                    }}
+                  >
                     QTY
                   </th>
-                  <th style={{ width: '25%', borderBottom: '1px dashed #000', padding: '4px 3px', paddingBottom: '4px', textAlign: 'right' }}>
+                  <th
+                    style={{
+                      width: '25%',
+                      borderBottom: '1px dashed #000',
+                      padding: '4px 3px',
+                      paddingBottom: '4px',
+                      textAlign: 'right',
+                    }}
+                  >
                     AMT
                   </th>
                 </tr>
@@ -558,43 +663,24 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
         </div>
 
         {/* Action Buttons */}
-        <div className="p-4 bg-white border-t border-gray-100 flex flex-col gap-2.5 shrink-0">
-          <div className="flex gap-2">
-            <button
-              onClick={handlePrint}
-              className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl font-bold text-sm bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20 active:scale-[0.98] transition-all"
-            >
-              <Printer className="w-4 h-4" />
-              Print (58mm)
-            </button>
-            <button
-              onClick={handleBluetoothPrint}
-              className="flex items-center justify-center gap-1.5 px-3 py-3 rounded-xl font-bold text-sm bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 active:scale-[0.98] transition-all"
-              title="Print directly to Bluetooth Thermal Printer"
-            >
-              <Bluetooth className="w-4 h-4" />
-              Bluetooth
-            </button>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={handleDownloadPdf}
-              disabled={isGeneratingPdf}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-semibold text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
-            >
-              {isGeneratingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-              Save 58mm PDF
-            </button>
-            <button
-              onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl font-semibold text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
-            >
-              Done / Close
-            </button>
-          </div>
+        <div className="p-4 bg-white border-t border-gray-100 flex gap-2.5 shrink-0">
+          <button
+            onClick={handlePrint}
+            disabled={isPrinting}
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20 active:scale-[0.98] transition-all disabled:opacity-75"
+          >
+            {isPrinting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+            Print
+          </button>
+          <button
+            onClick={handleDownloadPdf}
+            disabled={isGeneratingPdf}
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 active:scale-[0.98] transition-all disabled:opacity-75"
+          >
+            {isGeneratingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            Save PDF
+          </button>
         </div>
-
       </div>
     </div>
   );
