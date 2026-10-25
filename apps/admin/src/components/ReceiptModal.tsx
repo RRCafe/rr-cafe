@@ -138,27 +138,26 @@ export function ReceiptModal({ data, onClose }: ReceiptModalProps) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RR Cafe Receipt</title>
 <style>
-body{margin:0;padding:20px;display:flex;justify-content:center;background-color:#e0e0e0}
-.receipt-container{width:58mm;max-width:58mm;background:#fff;padding:4mm;box-sizing:border-box;font-family:'Courier New',Courier,monospace;font-size:10px;color:#000;line-height:1.2}
-.header{display:flex;align-items:center;gap:1px;margin-bottom:4px}
-.header img{height:32px; width:30px; object-fit:contain}
-.title-box{height:29.5px;min-width:0;flex:1;display:flex;flex-direction:column;justify-content:space-between}
-.header-text{display:flex;justify-content:space-between;align-items:center}
-.cafe-name{font-size:12px;font-weight:bold;margin:0}
-.order-id{font-size:7px;font-weight:bold;margin:0}
-.address-box{font-size:6.5px;margin:0;word-wrap:break-word;text-align:left}
-.divider{border-top:1px dashed #000;margin:4px 0}
-.divider-solid{border-top:2px solid #000;margin:4px 0}
-.meta-details,.summary-row,.total-row{display:flex;justify-content:space-between}
-.meta-details{font-size:8px;margin:2px 0}
-.summary-row{margin-bottom:2px}
+* { box-sizing: border-box; }
+body{margin:0;padding:20px;display:flex;justify-content:center;background-color:#e0e0e0;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+.receipt-container{width:58mm;max-width:58mm;background:#fff;padding:4mm;font-family:'Courier New',Courier,monospace;font-size:10px;color:#000;line-height:1.25}
+.header{display:flex;align-items:flex-start;gap:4px;margin-bottom:4px}
+.header img{height:32px; width:32px; object-fit:contain; flex-shrink:0;}
+.title-box{flex:1;min-width:0;}
+.header-text{display:flex;justify-content:space-between;align-items:baseline}
+.cafe-name{font-size:13px;font-weight:bold;margin:0;line-height:1.2}
+.order-id{font-size:8px;font-weight:bold;margin:0;line-height:1.2}
+.address-box{font-size:7.5px;margin:2px 0 0 0;word-break:break-word;text-align:left;line-height:1.25}
+.meta-details{border-top:1px dashed #000;border-bottom:1px dashed #000;padding:3px 0;margin:4px 0;display:flex;justify-content:space-between;font-size:8px}
 .item-table{width:100%;border-collapse:collapse;table-layout:fixed;margin:4px 0}
-.item-table th,.item-table td{padding:4px 3px;vertical-align:top}
-.item-table th{border-bottom:1px dashed #000;padding-bottom:4px;text-align:left}
-.col-item{width:45%;word-wrap:break-word}
+.item-table th,.item-table td{padding:3px 2px;vertical-align:top;font-size:9px}
+.item-table th{border-bottom:1px dashed #000;text-align:left}
+.col-item{width:45%;word-break:break-word}
 .col-qty{width:30%;text-align:left}
 .col-amt{width:25%;text-align:right}
-.total-row{font-size:14px;font-weight:bold;margin:4px 0}
+.summary-section{border-top:1px dashed #000;padding-top:4px;margin-top:4px;font-size:9px}
+.summary-row{display:flex;justify-content:space-between;margin-bottom:2px}
+.total-row{border-top:2px solid #000;border-bottom:2px solid #000;padding:4px 0;margin:4px 0;display:flex;justify-content:space-between;font-size:14px;font-weight:bold}
 .footer{text-align:center;font-size:11px;margin-top:6px}
 
 @page {
@@ -195,7 +194,6 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
             </div>
         </div>
 
-        <div class="divider"></div>
         <div class="meta-details">
             <span>${dateStr}</span>
             <span>${timeStr}</span>
@@ -203,7 +201,6 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
             <span>${paymentMethodStr}</span>
         </div>
 
-        <div class="divider"></div>
         <table class="item-table">
             <thead>
                 <tr>
@@ -218,28 +215,27 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
             </tbody>
         </table>
 
-        <div class="divider"></div>
-        <div class="summary-row">
-            <span>Items: ${data.totalItems}</span>
-            <span>Subtotal: ₹${data.total.toFixed(2)}</span>
+        <div class="summary-section">
+            <div class="summary-row">
+                <span>Items: ${data.totalItems}</span>
+                <span>Subtotal: ₹${data.total.toFixed(2)}</span>
+            </div>
+            ${
+              data.packagingFee > 0
+                ? `
+            <div class="summary-row">
+                <span>Packaging Fee</span>
+                <span>₹${data.packagingFee.toFixed(2)}</span>
+            </div>`
+                : ''
+            }
         </div>
-        ${
-          data.packagingFee > 0
-            ? `
-        <div class="summary-row">
-            <span>Packaging Fee</span>
-            <span>₹${data.packagingFee.toFixed(2)}</span>
-        </div>`
-            : ''
-        }
 
-        <div class="divider-solid"></div>
         <div class="total-row">
             <span>TOTAL</span>
             <span>₹${data.grandTotal.toFixed(2)}</span>
         </div>
 
-        <div class="divider-solid"></div>
         <div class="footer">
             Thank You! Visit us again :)
         </div>
@@ -290,6 +286,7 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
         allowTaint: true,
         backgroundColor: '#ffffff',
         logging: false,
+        windowWidth: 384,
       });
 
       return canvas;
@@ -331,25 +328,11 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
       gray[i] = 0.299 * r + 0.587 * g + 0.114 * b;
     }
 
-    // Floyd-Steinberg error diffusion dithering for smooth logo, text, and emojis
+    // Clean binary thresholding for solid, dark, razor-sharp text and lines (no scattered dots)
     const binary = new Uint8Array(targetWidth * targetHeight);
-    for (let y = 0; y < targetHeight; y++) {
-      for (let x = 0; x < targetWidth; x++) {
-        const idx = y * targetWidth + x;
-        const oldVal = gray[idx];
-        const newVal = oldVal < 165 ? 0 : 255;
-        binary[idx] = newVal === 0 ? 1 : 0; // 1 = black dot
-        const err = oldVal - newVal;
-
-        if (x + 1 < targetWidth) {
-          gray[idx + 1] += err * (7 / 16);
-        }
-        if (y + 1 < targetHeight) {
-          if (x > 0) gray[(y + 1) * targetWidth + (x - 1)] += err * (3 / 16);
-          gray[(y + 1) * targetWidth + x] += err * (5 / 16);
-          if (x + 1 < targetWidth) gray[(y + 1) * targetWidth + (x + 1)] += err * (1 / 16);
-        }
-      }
+    const threshold = 195; // Anything darker than light gray is solid black
+    for (let i = 0; i < targetWidth * targetHeight; i++) {
+      binary[i] = gray[i] < threshold ? 1 : 0; // 1 = black thermal dot, 0 = white paper
     }
 
     // Slice in 128-row bands to avoid printer buffer overflow
@@ -664,47 +647,35 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
                     fontFamily: "'Courier New', Courier, monospace",
                     fontSize: '10px',
                     color: '#000',
-                    lineHeight: 1.2,
+                    lineHeight: 1.25,
+                    WebkitTextSizeAdjust: '100%',
                   }}
                 >
                   {/* Header */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1px', marginBottom: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px', marginBottom: '4px' }}>
                     <img
                       src={rrcafeLogo}
                       alt="RR Cafe Logo"
-                      style={{ height: '32px', width: '30px', objectFit: 'contain' }}
+                      style={{ height: '32px', width: '32px', objectFit: 'contain', flexShrink: 0 }}
                     />
-                    <div
-                      style={{
-                        height: '29.5px',
-                        minWidth: 0,
-                        flex: 1,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <p style={{ fontSize: '12px', fontWeight: 'bold', margin: 0 }}>RR Cafe</p>
-                        <p style={{ fontSize: '7px', fontWeight: 'bold', margin: 0 }}>{data.orderId}</p>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                        <p style={{ fontSize: '13px', fontWeight: 'bold', margin: 0, lineHeight: 1.2 }}>RR Cafe</p>
+                        <p style={{ fontSize: '8px', fontWeight: 'bold', margin: 0, lineHeight: 1.2 }}>{data.orderId}</p>
                       </div>
-                      <p style={{ fontSize: '6.5px', margin: 0, wordWrap: 'break-word', textAlign: 'left' }}>
+                      <p style={{ fontSize: '7.5px', margin: '2px 0 0 0', wordBreak: 'break-word', textAlign: 'left', lineHeight: 1.25 }}>
                         Victoria Rd, Kulasekharapatnam - 628206<br />Phone no: 9003244241
                       </p>
                     </div>
                   </div>
 
-                  <div style={{ borderTop: '1px dashed #000', margin: '4px 0' }}></div>
-
                   {/* Meta Details */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8px', margin: '2px 0' }}>
+                  <div style={{ borderTop: '1px dashed #000', borderBottom: '1px dashed #000', padding: '3px 0', margin: '4px 0', display: 'flex', justifyContent: 'space-between', fontSize: '8px' }}>
                     <span>{dateStr}</span>
                     <span>{timeStr}</span>
                     <span>{orderTypeStr}</span>
                     <span>{paymentMethodStr}</span>
                   </div>
-
-                  <div style={{ borderTop: '1px dashed #000', margin: '4px 0' }}></div>
 
                   {/* Item Table */}
                   <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', margin: '4px 0' }}>
@@ -713,11 +684,11 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
                         <th
                           style={{
                             width: '45%',
-                            wordWrap: 'break-word',
+                            wordBreak: 'break-word',
                             borderBottom: '1px dashed #000',
-                            padding: '4px 3px',
-                            paddingBottom: '4px',
+                            padding: '3px 2px',
                             textAlign: 'left',
+                            fontSize: '9px',
                           }}
                         >
                           ITEM
@@ -726,9 +697,9 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
                           style={{
                             width: '30%',
                             borderBottom: '1px dashed #000',
-                            padding: '4px 3px',
-                            paddingBottom: '4px',
+                            padding: '3px 2px',
                             textAlign: 'center',
+                            fontSize: '9px',
                           }}
                         >
                           QTY
@@ -737,9 +708,9 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
                           style={{
                             width: '25%',
                             borderBottom: '1px dashed #000',
-                            padding: '4px 3px',
-                            paddingBottom: '4px',
+                            padding: '3px 2px',
                             textAlign: 'right',
+                            fontSize: '9px',
                           }}
                         >
                           AMT
@@ -749,13 +720,13 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
                     <tbody>
                       {data.items.map(item => (
                         <tr key={item.id}>
-                          <td style={{ width: '45%', wordWrap: 'break-word', padding: '4px 3px', verticalAlign: 'top' }}>
+                          <td style={{ width: '45%', wordBreak: 'break-word', padding: '3px 2px', verticalAlign: 'top', fontSize: '9px' }}>
                             {item.name}
                           </td>
-                          <td style={{ width: '30%', textAlign: 'left', padding: '4px 3px', verticalAlign: 'top' }}>
+                          <td style={{ width: '30%', textAlign: 'left', padding: '3px 2px', verticalAlign: 'top', fontSize: '9px' }}>
                             {item.quantity}x ₹{item.price}
                           </td>
-                          <td style={{ width: '25%', textAlign: 'right', padding: '4px 3px', verticalAlign: 'top' }}>
+                          <td style={{ width: '25%', textAlign: 'right', padding: '3px 2px', verticalAlign: 'top', fontSize: '9px' }}>
                             ₹{(item.price * item.quantity).toFixed(2)}
                           </td>
                         </tr>
@@ -763,29 +734,25 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
                     </tbody>
                   </table>
 
-                  <div style={{ borderTop: '1px dashed #000', margin: '4px 0' }}></div>
-
                   {/* Summary */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                    <span>Items: {data.totalItems}</span>
-                    <span>Subtotal: ₹{data.total.toFixed(2)}</span>
-                  </div>
-                  {data.packagingFee > 0 && (
+                  <div style={{ borderTop: '1px dashed #000', paddingTop: '4px', marginTop: '4px', fontSize: '9px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                      <span>Packaging Fee</span>
-                      <span>₹{data.packagingFee.toFixed(2)}</span>
+                      <span>Items: {data.totalItems}</span>
+                      <span>Subtotal: ₹{data.total.toFixed(2)}</span>
                     </div>
-                  )}
-
-                  <div style={{ borderTop: '2px solid #000', margin: '4px 0' }}></div>
+                    {data.packagingFee > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                        <span>Packaging Fee</span>
+                        <span>₹{data.packagingFee.toFixed(2)}</span>
+                      </div>
+                    )}
+                  </div>
 
                   {/* Total */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 'bold', margin: '4px 0' }}>
+                  <div style={{ borderTop: '2px solid #000', borderBottom: '2px solid #000', padding: '4px 0', margin: '4px 0', display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 'bold' }}>
                     <span>TOTAL</span>
                     <span>₹{data.grandTotal.toFixed(2)}</span>
                   </div>
-
-                  <div style={{ borderTop: '2px solid #000', margin: '4px 0' }}></div>
 
                   {/* Footer */}
                   <div style={{ textAlign: 'center', fontSize: '11px', marginTop: '6px' }}>

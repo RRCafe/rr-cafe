@@ -233,14 +233,31 @@ public class MainActivity extends BridgeActivity {
                 try {
                     runOnUiThread(() -> Toast.makeText(MainActivity.this, "Connecting to " + (device.getName() != null ? device.getName() : "Printer") + "...", Toast.LENGTH_SHORT).show());
 
+                    BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
+                    if (btAdapter != null && btAdapter.isDiscovering()) {
+                        btAdapter.cancelDiscovery();
+                    }
+
                     byte[] data = Base64.decode(base64Data, Base64.DEFAULT);
-                    socket = device.createRfcommSocketToServiceRecord(SPP_UUID);
-                    socket.connect();
+
+                    // Robust SPP socket connection with reflection fallback
+                    try {
+                        socket = device.createRfcommSocketToServiceRecord(SPP_UUID);
+                        socket.connect();
+                    } catch (Exception primaryEx) {
+                        try {
+                            java.lang.reflect.Method m = device.getClass().getMethod("createRfcommSocket", new Class[] { int.class });
+                            socket = (BluetoothSocket) m.invoke(device, 1);
+                            socket.connect();
+                        } catch (Exception fallbackEx) {
+                            throw primaryEx;
+                        }
+                    }
 
                     OutputStream os = socket.getOutputStream();
-                    // Stream in 512-byte chunks with brief throttle to ensure hardware thermal printer buffer never overflows
+                    // Stream in 256-byte chunks with throttle so even low-cost thermal printer buffers never drop bytes
                     int offset = 0;
-                    int chunkSize = 512;
+                    int chunkSize = 256;
                     while (offset < data.length) {
                         int len = Math.min(chunkSize, data.length - offset);
                         os.write(data, offset, len);
@@ -251,7 +268,7 @@ public class MainActivity extends BridgeActivity {
                         } catch (InterruptedException ignored) {}
                     }
 
-                    Thread.sleep(800); // Give printer buffer time to complete print
+                    Thread.sleep(1000); // Give printer buffer time to complete print before closing socket
                     runOnUiThread(() -> Toast.makeText(MainActivity.this, "Receipt printed successfully!", Toast.LENGTH_SHORT).show());
                 } catch (Exception e) {
                     e.printStackTrace();
