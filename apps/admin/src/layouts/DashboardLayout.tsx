@@ -1,7 +1,6 @@
 import { Outlet, Navigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LayoutDashboard, UtensilsCrossed, Calculator, Settings as SettingsIcon, LogOut, History, Users } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { LayoutDashboard, UtensilsCrossed, Calculator, Settings as SettingsIcon, History, Users } from 'lucide-react';
 import rrcafeLogo from '../assets/rrcafe-logo.svg';
 
 export default function DashboardLayout() {
@@ -20,10 +19,6 @@ export default function DashboardLayout() {
     return <Navigate to="/login" replace />;
   }
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-  };
-
   const navItems = [
     { name: 'Live Orders', path: '/', icon: LayoutDashboard },
     { name: 'Billing', path: '/billing', icon: Calculator },
@@ -34,7 +29,7 @@ export default function DashboardLayout() {
   ];
 
   return (
-    <div className="min-h-[100dvh] bg-gray-100 flex flex-col md:flex-row pb-[calc(4rem+env(safe-area-inset-bottom,0px))] md:pb-0">
+    <div className="min-h-[100dvh] bg-gray-100 flex flex-col md:flex-row pb-[calc(4rem+env(safe-area-inset-bottom,0px))] md:pb-0 pt-[env(safe-area-inset-top,0px)]">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-20 hover:w-64 transition-all duration-300 ease-in-out bg-white border-r border-gray-200 flex-col overflow-hidden group z-50 h-full">
         <div className="h-16 flex items-center px-6 border-b border-gray-200 shrink-0 whitespace-nowrap">
@@ -64,17 +59,6 @@ export default function DashboardLayout() {
             );
           })}
         </nav>
-
-        <div className="p-4 border-t border-gray-200 shrink-0">
-          <button
-            onClick={handleSignOut}
-            title="Sign Out"
-            className="w-full flex items-center gap-3 px-3 py-3 text-red-600 hover:bg-red-50 rounded-lg font-medium transition-colors whitespace-nowrap"
-          >
-            <LogOut className="w-6 h-6 shrink-0" />
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">Sign Out</span>
-          </button>
-        </div>
       </aside>
 
       {/* Main Content */}
@@ -84,7 +68,7 @@ export default function DashboardLayout() {
 
       {/* Mobile Bottom Nav */}
       <nav 
-        className="md:hidden fixed bottom-0 left-0 right-0 w-full bg-white border-t border-gray-200 flex items-center justify-around z-40 px-1" 
+        className="md:hidden fixed bottom-0 left-0 right-0 w-full bg-white border-t border-gray-200 flex items-center justify-around z-40 px-2" 
         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)", height: "calc(4rem + env(safe-area-inset-bottom, 0px))" }}
       >
         {navItems.map((item) => {
@@ -94,7 +78,7 @@ export default function DashboardLayout() {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex flex-col items-center justify-center w-full h-full ${
+              className={`flex flex-col items-center justify-center w-full h-16 ${
                 isActive ? 'text-blue-600' : 'text-gray-500'
               }`}
             >
@@ -102,14 +86,6 @@ export default function DashboardLayout() {
             </Link>
           );
         })}
-        {/* Logout button placed on the right like settings tab */}
-        <button
-          onClick={handleSignOut}
-          title="Sign Out"
-          className="flex flex-col items-center justify-center w-full h-full text-red-500 hover:text-red-700 active:scale-90 transition-transform"
-        >
-          <LogOut className="w-6 h-6" />
-        </button>
       </nav>
     </div>
   );

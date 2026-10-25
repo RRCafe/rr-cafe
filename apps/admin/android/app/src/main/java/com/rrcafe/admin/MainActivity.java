@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.media.MediaScannerConnection;
 import android.net.ConnectivityManager;
@@ -20,7 +21,8 @@ import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.widget.Toast;
-import androidx.core.view.WindowCompat;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.getcapacitor.BridgeActivity;
@@ -37,6 +39,7 @@ public class MainActivity extends BridgeActivity {
     private static final String PREFS_NAME = "RR_CAFE_ADMIN_PREFS";
     private static final String PREF_PRINTER_MAC = "selected_printer_mac";
     private static final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+    private static final int REQUEST_BLUETOOTH_PERMS = 101;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,14 +49,10 @@ public class MainActivity extends BridgeActivity {
         window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
         
-        // Ensure the app fits within system windows so content does NOT extend under the status bar
-        WindowCompat.setDecorFitsSystemWindows(window, true);
-        window.getDecorView().setFitsSystemWindows(true);
-
         // Status bar background color (#F5EEDC) with dark icons
         window.setStatusBarColor(Color.parseColor("#F5EEDC"));
         
-        // Navigation bar background color (#FFFFFF) with dark icons
+        // Navigation bar background color (#FFFFFF) with dark icons (restores edge-to-edge white bottom bar)
         window.setNavigationBarColor(Color.parseColor("#FFFFFF"));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             window.setNavigationBarContrastEnforced(false);
@@ -62,6 +61,9 @@ public class MainActivity extends BridgeActivity {
         WindowInsetsControllerCompat insetsController = new WindowInsetsControllerCompat(window, window.getDecorView());
         insetsController.setAppearanceLightStatusBars(true);
         insetsController.setAppearanceLightNavigationBars(true);
+
+        // Prompt Bluetooth runtime permissions proactively on Android 12+ (API 31+)
+        checkAndRequestBluetoothPermissions();
 
         WebView webView = getBridge().getWebView();
         if (webView != null) {
@@ -98,6 +100,23 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
+    private boolean checkAndRequestBluetoothPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            List<String> needed = new ArrayList<>();
+            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                needed.add(android.Manifest.permission.BLUETOOTH_CONNECT);
+            }
+            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+                needed.add(android.Manifest.permission.BLUETOOTH_SCAN);
+            }
+            if (!needed.isEmpty()) {
+                ActivityCompat.requestPermissions(this, needed.toArray(new String[0]), REQUEST_BLUETOOTH_PERMS);
+                return false;
+            }
+        }
+        return true;
+    }
+
     @Override
     public void onBackPressed() {
         WebView webView = getBridge().getWebView();
@@ -130,6 +149,12 @@ public class MainActivity extends BridgeActivity {
         public void printBluetoothThermal(final String base64EscPosData) {
             runOnUiThread(() -> {
                 try {
+                    // Check runtime Bluetooth permissions on Android 12+
+                    if (!checkAndRequestBluetoothPermissions()) {
+                        Toast.makeText(MainActivity.this, "Please allow Bluetooth permissions to connect to printer", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+
                     BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
                     if (btAdapter == null) {
                         Toast.makeText(MainActivity.this, "Bluetooth not supported on this device", Toast.LENGTH_SHORT).show();
@@ -141,9 +166,16 @@ public class MainActivity extends BridgeActivity {
                         return;
                     }
 
-                    Set<BluetoothDevice> pairedDevices = btAdapter.getBondedDevices();
+                    Set<BluetoothDevice> pairedDevices;
+                    try {
+                        pairedDevices = btAdapter.getBondedDevices();
+                    } catch (SecurityException se) {
+                        Toast.makeText(MainActivity.this, "Bluetooth permission required. Please grant it in App Settings.", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+
                     if (pairedDevices == null || pairedDevices.isEmpty()) {
-                        Toast.makeText(MainActivity.this, "No paired Bluetooth printers found. Please pair your printer in Android Settings first.", Toast.LENGTH_LONG).show();
+                        Toast.makeText(MainActivity.this, "No paired Bluetooth printers found. Please pair your printer in Android Bluetooth Settings first.", Toast.LENGTH_LONG).show();
                         return;
                     }
 
