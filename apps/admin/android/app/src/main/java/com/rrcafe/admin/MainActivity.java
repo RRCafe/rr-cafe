@@ -238,10 +238,20 @@ public class MainActivity extends BridgeActivity {
                     socket.connect();
 
                     OutputStream os = socket.getOutputStream();
-                    os.write(data);
-                    os.flush();
+                    // Stream in 512-byte chunks with brief throttle to ensure hardware thermal printer buffer never overflows
+                    int offset = 0;
+                    int chunkSize = 512;
+                    while (offset < data.length) {
+                        int len = Math.min(chunkSize, data.length - offset);
+                        os.write(data, offset, len);
+                        os.flush();
+                        offset += len;
+                        try {
+                            Thread.sleep(15);
+                        } catch (InterruptedException ignored) {}
+                    }
 
-                    Thread.sleep(600); // Give printer buffer time to complete print
+                    Thread.sleep(800); // Give printer buffer time to complete print
                     runOnUiThread(() -> Toast.makeText(MainActivity.this, "Receipt printed successfully!", Toast.LENGTH_SHORT).show());
                 } catch (Exception e) {
                     e.printStackTrace();
