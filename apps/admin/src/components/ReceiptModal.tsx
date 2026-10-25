@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { X, Printer, Download, CheckCircle2, Loader2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -28,7 +28,7 @@ interface ReceiptModalProps {
   onClose: () => void;
 }
 
-// Global Bluetooth printer device cache so user only selects once per session
+// Global Bluetooth printer device cache for Web Bluetooth (Laptop Chrome)
 let cachedBtDevice: any = null;
 let cachedBtCharacteristic: any = null;
 
@@ -58,13 +58,21 @@ function getOrderTypeDisplay(type: string) {
   return 'Dine In';
 }
 
-function getPaymentMethodDisplay(method: string) {
-  if (method === 'direct_qr') return 'UPI / QR';
+function getPaymentMethodDisplay(method: string, orderType?: string) {
+  const m = (method || '').toLowerCase();
+  if (
+    m === 'razorpay' ||
+    m === 'online' ||
+    m === 'upi' ||
+    m === 'direct_qr' ||
+    orderType === 'delivery'
+  ) {
+    return 'UPI';
+  }
   return 'Cash';
 }
 
 export function ReceiptModal({ data, onClose }: ReceiptModalProps) {
-  const receiptRef = useRef<HTMLDivElement>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [printStatus, setPrintStatus] = useState<string | null>(null);
@@ -72,313 +80,7 @@ export function ReceiptModal({ data, onClose }: ReceiptModalProps) {
   const dateStr = formatReceiptDate(data.createdAt);
   const timeStr = formatReceiptTime(data.createdAt);
   const orderTypeStr = getOrderTypeDisplay(data.orderType);
-  const paymentMethodStr = getPaymentMethodDisplay(data.paymentMethod);
-
-  // High-accuracy 58mm PDF generator preserving exact alignment
-  const generatePdf = async () => {
-    if (!receiptRef.current) return null;
-    const element = receiptRef.current;
-    const zoomContainer = document.getElementById('receipt-zoom-container');
-
-    const prevTransform = zoomContainer ? zoomContainer.style.transform : '';
-    const prevMargin = zoomContainer ? zoomContainer.style.marginBottom : '';
-    if (zoomContainer) {
-      zoomContainer.style.transform = 'none';
-      zoomContainer.style.marginBottom = '0px';
-    }
-
-    try {
-      if (document.fonts && document.fonts.ready) {
-        await document.fonts.ready;
-      }
-
-      // Ensure all images are fully loaded
-      const imgs = Array.from(element.querySelectorAll('img'));
-      await Promise.all(
-        imgs.map(
-          img =>
-            new Promise<void>(resolve => {
-              if (img.complete && img.naturalWidth !== 0) resolve();
-              else {
-                img.onload = () => resolve();
-                img.onerror = () => resolve();
-              }
-            })
-        )
-      );
-
-      // Render directly with html2canvas preserving exact CSS and paddings
-      const canvas = await html2canvas(element, {
-        scale: 3,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-      });
-
-      const pdfWidthMm = 58;
-      const pdfHeightMm = (canvas.height * pdfWidthMm) / canvas.width;
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: [pdfWidthMm, pdfHeightMm],
-        compress: true,
-      });
-
-      const imgData = canvas.toDataURL('image/png', 1.0);
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidthMm, pdfHeightMm, undefined, 'FAST');
-      return pdf;
-    } finally {
-      if (zoomContainer) {
-        zoomContainer.style.transform = prevTransform;
-        zoomContainer.style.marginBottom = prevMargin;
-      }
-    }
-  };
-
-  // Generate raw ESC/POS bytes for thermal printers
-  const generateEscPosData = () => {
-    const encoder = new TextEncoder();
-    const bytes: number[] = [];
-
-    const append = (str: string) => {
-      const encoded = encoder.encode(str);
-      for (let i = 0; i < encoded.length; i++) bytes.push(encoded[i]);
-    };
-
-    // ESC @ - Init
-    bytes.push(0x1b, 0x40);
-
-    // ESC a 1 - Center align
-    bytes.push(0x1b, 0x61, 0x01);
-    // Double height/width for title
-    bytes.push(0x1d, 0x21, 0x11);
-    append('RR CAFE\n');
-    bytes.push(0x1d, 0x21, 0x00);
-    append('Victoria Rd, Kulasekharapatnam - 628206\n');
-    append('Phone no: 9003244241\n');
-    append('--------------------------------\n');
-
-    // ESC a 0 - Left align
-    bytes.push(0x1b, 0x61, 0x00);
-    append(`Order: ${data.orderId}\n`);
-    append(`Date: ${dateStr}  ${timeStr}\n`);
-    append(`Type: ${orderTypeStr} | ${paymentMethodStr}\n`);
-    append('--------------------------------\n');
-    append('ITEM              QTY        AMT\n');
-    append('--------------------------------\n');
-
-    data.items.forEach(item => {
-      const name = item.name.length > 14 ? item.name.substring(0, 14) : item.name.padEnd(14);
-      const qty = `${item.quantity}x`.padStart(5);
-      const amt = `Rs.${(item.price * item.quantity).toFixed(2)}`.padStart(11);
-      append(`${name}${qty}${amt}\n`);
-    });
-
-    append('--------------------------------\n');
-    append(`Items: ${data.totalItems}`.padEnd(16) + `Subtotal: Rs.${data.total.toFixed(2)}`.padStart(16) + '\n');
-    if (data.packagingFee > 0) {
-      append(`Packaging Fee`.padEnd(16) + `Rs.${data.packagingFee.toFixed(2)}`.padStart(16) + '\n');
-    }
-    append('================================\n');
-
-    // ESC a 1 - Center
-    bytes.push(0x1b, 0x61, 0x01);
-    bytes.push(0x1d, 0x21, 0x01);
-    append(`TOTAL: Rs.${data.grandTotal.toFixed(2)}\n`);
-    bytes.push(0x1d, 0x21, 0x00);
-    append('================================\n');
-    append('Thank You! Visit us again :)\n\n\n\n');
-
-    // GS V 66 0 - Paper cut
-    bytes.push(0x1d, 0x56, 0x42, 0x00);
-
-    return new Uint8Array(bytes);
-  };
-
-  // Direct Bluetooth Printer sender
-  const printViaBluetooth = async (): Promise<boolean> => {
-    const nav = navigator as any;
-    if (!nav.bluetooth) return false;
-
-    let device = cachedBtDevice;
-    let writeChar = cachedBtCharacteristic;
-
-    // Check if cached device is still connected
-    if (device && device.gatt && !device.gatt.connected) {
-      try {
-        setPrintStatus('Reconnecting to printer...');
-        const server = await device.gatt.connect();
-        writeChar = await findWritableCharacteristic(server);
-        cachedBtCharacteristic = writeChar;
-      } catch {
-        device = null;
-        writeChar = null;
-        cachedBtDevice = null;
-        cachedBtCharacteristic = null;
-      }
-    }
-
-    // If no active cached device, request one
-    if (!device || !writeChar) {
-      setPrintStatus('Selecting Bluetooth printer...');
-      device = await nav.bluetooth.requestDevice({
-        acceptAllDevices: true,
-        optionalServices: [
-          '000018f0-0000-1000-8000-00805f9b34fb',
-          '49535343-fe7d-4ae5-8fa9-9fafd205e455',
-          'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
-          '0000ff00-0000-1000-8000-00805f9b34fb',
-        ],
-      });
-
-      setPrintStatus('Connecting to printer...');
-      const server = await device.gatt?.connect();
-      if (!server) throw new Error('Could not connect to GATT server');
-
-      writeChar = await findWritableCharacteristic(server);
-      if (!writeChar) throw new Error('No writable characteristic found');
-
-      // Cache device and characteristic for subsequent one-click prints
-      cachedBtDevice = device;
-      cachedBtCharacteristic = writeChar;
-      try {
-        localStorage.setItem('rr_last_printer_name', device.name || 'Thermal Printer');
-      } catch {
-        // ignore
-      }
-    }
-
-    setPrintStatus('Sending receipt to printer...');
-    const escPosBytes = generateEscPosData();
-    const chunkSize = 100;
-    for (let i = 0; i < escPosBytes.length; i += chunkSize) {
-      const chunk = escPosBytes.slice(i, i + chunkSize);
-      if (writeChar.properties.writeWithoutResponse) {
-        await writeChar.writeValueWithoutResponse(chunk);
-      } else {
-        await writeChar.writeValue(chunk);
-      }
-    }
-
-    setPrintStatus('Printed successfully!');
-    setTimeout(() => setPrintStatus(null), 2500);
-    return true;
-  };
-
-  const findWritableCharacteristic = async (server: any) => {
-    const services = await server.getPrimaryServices();
-    for (const service of services) {
-      try {
-        const chars = await service.getCharacteristics();
-        for (const c of chars) {
-          if (c.properties.write || c.properties.writeWithoutResponse) {
-            return c;
-          }
-        }
-      } catch {
-        // continue
-      }
-    }
-    return null;
-  };
-
-  // Unified Print Action
-  const handlePrint = async () => {
-    setIsPrinting(true);
-    setPrintStatus('Preparing print...');
-
-    try {
-      // 1. If Web Bluetooth is available, try Bluetooth direct print first
-      if ((navigator as any).bluetooth) {
-        try {
-          const success = await printViaBluetooth();
-          if (success) {
-            setIsPrinting(false);
-            return;
-          }
-        } catch (btErr: any) {
-          console.warn('Bluetooth print skipped or cancelled:', btErr);
-          // If user cancelled device picker, don't force fallback immediately unless requested
-          if (btErr.name === 'NotFoundError') {
-            setIsPrinting(false);
-            setPrintStatus(null);
-            return;
-          }
-        }
-      }
-
-      // 2. If inside Android Capacitor APK, use native Android PrintManager bridge
-      const androidPrinter = (window as any).AndroidPrinter;
-      if (androidPrinter && typeof androidPrinter.printReceiptHtml === 'function') {
-        setPrintStatus('Opening Android print spooler...');
-        androidPrinter.printReceiptHtml(getPrintHtml());
-        setIsPrinting(false);
-        setPrintStatus(null);
-        return;
-      }
-
-      // 3. Fallback: browser isolated print iframe with exact dimensions
-      setPrintStatus('Opening print dialogue...');
-      printViaIframe();
-    } catch (err: any) {
-      console.error('Print error:', err);
-      setPrintStatus('Print error: ' + (err.message || 'Unknown error'));
-      setTimeout(() => setPrintStatus(null), 3000);
-    } finally {
-      setIsPrinting(false);
-    }
-  };
-
-  const printViaIframe = () => {
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow?.document;
-    if (!doc) return;
-
-    doc.open();
-    doc.write(getPrintHtml());
-    doc.close();
-
-    iframe.onload = () => {
-      setTimeout(() => {
-        try {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-        } catch (e) {
-          console.error('Print iframe error:', e);
-        } finally {
-          setTimeout(() => {
-            if (document.body.contains(iframe)) {
-              document.body.removeChild(iframe);
-            }
-          }, 2000);
-        }
-      }, 300);
-    };
-  };
-
-  // Download PDF
-  const handleDownloadPdf = async () => {
-    setIsGeneratingPdf(true);
-    try {
-      const pdf = await generatePdf();
-      if (pdf) {
-        pdf.save(`Receipt-${data.orderId.replace('#', '')}.pdf`);
-      }
-    } catch (err) {
-      console.error('Failed to generate PDF:', err);
-    } finally {
-      setIsGeneratingPdf(false);
-    }
-  };
+  const paymentMethodStr = getPaymentMethodDisplay(data.paymentMethod, data.orderType);
 
   // Exact HTML and CSS from user's receipt.html
   const getPrintHtml = () => {
@@ -511,6 +213,337 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
 </html>`;
   };
 
+  // High-accuracy 58mm PDF generator using isolated sandbox (zero CSS interference)
+  const generatePdf = async () => {
+    return new Promise<any>((resolve, reject) => {
+      try {
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.left = '-9999px';
+        iframe.style.top = '0';
+        iframe.style.width = '350px';
+        iframe.style.height = '1200px';
+        iframe.style.border = '0';
+        iframe.style.visibility = 'hidden';
+        document.body.appendChild(iframe);
+
+        const doc = iframe.contentWindow?.document;
+        if (!doc) {
+          document.body.removeChild(iframe);
+          reject(new Error('Cannot access iframe document'));
+          return;
+        }
+
+        doc.open();
+        doc.write(getPrintHtml());
+        doc.close();
+
+        iframe.onload = async () => {
+          try {
+            if (iframe.contentWindow?.document.fonts) {
+              await iframe.contentWindow.document.fonts.ready;
+            }
+
+            const target = doc.querySelector('.receipt-container') as HTMLElement;
+            if (!target) throw new Error('Receipt container element missing');
+
+            const img = target.querySelector('img');
+            if (img && !img.complete) {
+              await new Promise(r => {
+                img.onload = r;
+                img.onerror = r;
+              });
+            }
+
+            const canvas = await html2canvas(target, {
+              scale: 3,
+              useCORS: true,
+              allowTaint: true,
+              backgroundColor: '#ffffff',
+              logging: false,
+              windowWidth: 320,
+            });
+
+            const pdfWidthMm = 58;
+            const pdfHeightMm = (canvas.height * pdfWidthMm) / canvas.width;
+            const pdf = new jsPDF({
+              orientation: 'portrait',
+              unit: 'mm',
+              format: [pdfWidthMm, pdfHeightMm],
+              compress: true,
+            });
+
+            const imgData = canvas.toDataURL('image/png', 1.0);
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidthMm, pdfHeightMm, undefined, 'FAST');
+
+            document.body.removeChild(iframe);
+            resolve(pdf);
+          } catch (err) {
+            if (document.body.contains(iframe)) document.body.removeChild(iframe);
+            reject(err);
+          }
+        };
+      } catch (err) {
+        reject(err);
+      }
+    });
+  };
+
+  // Generate raw ESC/POS bytes for thermal printers
+  const generateEscPosData = () => {
+    const encoder = new TextEncoder();
+    const bytes: number[] = [];
+
+    const append = (str: string) => {
+      const encoded = encoder.encode(str);
+      for (let i = 0; i < encoded.length; i++) bytes.push(encoded[i]);
+    };
+
+    // ESC @ - Init
+    bytes.push(0x1b, 0x40);
+
+    // ESC a 1 - Center align
+    bytes.push(0x1b, 0x61, 0x01);
+    // Double height/width for title
+    bytes.push(0x1d, 0x21, 0x11);
+    append('RR CAFE\n');
+    bytes.push(0x1d, 0x21, 0x00);
+    append('Victoria Rd, Kulasekharapatnam - 628206\n');
+    append('Phone no: 9003244241\n');
+    append('--------------------------------\n');
+
+    // ESC a 0 - Left align
+    bytes.push(0x1b, 0x61, 0x00);
+    append(`Order: ${data.orderId}\n`);
+    append(`Date: ${dateStr}  ${timeStr}\n`);
+    append(`Type: ${orderTypeStr} | ${paymentMethodStr}\n`);
+    append('--------------------------------\n');
+    append('ITEM              QTY        AMT\n');
+    append('--------------------------------\n');
+
+    data.items.forEach(item => {
+      const name = item.name.length > 14 ? item.name.substring(0, 14) : item.name.padEnd(14);
+      const qty = `${item.quantity}x`.padStart(5);
+      const amt = `Rs.${(item.price * item.quantity).toFixed(2)}`.padStart(11);
+      append(`${name}${qty}${amt}\n`);
+    });
+
+    append('--------------------------------\n');
+    append(`Items: ${data.totalItems}`.padEnd(16) + `Subtotal: Rs.${data.total.toFixed(2)}`.padStart(16) + '\n');
+    if (data.packagingFee > 0) {
+      append(`Packaging Fee`.padEnd(16) + `Rs.${data.packagingFee.toFixed(2)}`.padStart(16) + '\n');
+    }
+    append('================================\n');
+
+    // ESC a 1 - Center
+    bytes.push(0x1b, 0x61, 0x01);
+    bytes.push(0x1d, 0x21, 0x01);
+    append(`TOTAL: Rs.${data.grandTotal.toFixed(2)}\n`);
+    bytes.push(0x1d, 0x21, 0x00);
+    append('================================\n');
+    append('Thank You! Visit us again :)\n\n\n\n');
+
+    // GS V 66 0 - Paper cut
+    bytes.push(0x1d, 0x56, 0x42, 0x00);
+
+    return new Uint8Array(bytes);
+  };
+
+  // Direct Web Bluetooth for Laptop
+  const printViaBluetooth = async (): Promise<boolean> => {
+    const nav = navigator as any;
+    if (!nav.bluetooth) return false;
+
+    let device = cachedBtDevice;
+    let writeChar = cachedBtCharacteristic;
+
+    if (device && device.gatt && !device.gatt.connected) {
+      try {
+        setPrintStatus('Reconnecting to printer...');
+        const server = await device.gatt.connect();
+        writeChar = await findWritableCharacteristic(server);
+        cachedBtCharacteristic = writeChar;
+      } catch {
+        device = null;
+        writeChar = null;
+        cachedBtDevice = null;
+        cachedBtCharacteristic = null;
+      }
+    }
+
+    if (!device || !writeChar) {
+      setPrintStatus('Selecting Bluetooth printer...');
+      device = await nav.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: [
+          '000018f0-0000-1000-8000-00805f9b34fb',
+          '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+          'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
+          '0000ff00-0000-1000-8000-00805f9b34fb',
+        ],
+      });
+
+      setPrintStatus('Connecting to printer...');
+      const server = await device.gatt?.connect();
+      if (!server) throw new Error('Could not connect to GATT server');
+
+      writeChar = await findWritableCharacteristic(server);
+      if (!writeChar) throw new Error('No writable characteristic found');
+
+      cachedBtDevice = device;
+      cachedBtCharacteristic = writeChar;
+      try {
+        localStorage.setItem('rr_last_printer_name', device.name || 'Thermal Printer');
+      } catch {
+        // ignore
+      }
+    }
+
+    setPrintStatus('Sending receipt to printer...');
+    const escPosBytes = generateEscPosData();
+    const chunkSize = 100;
+    for (let i = 0; i < escPosBytes.length; i += chunkSize) {
+      const chunk = escPosBytes.slice(i, i + chunkSize);
+      if (writeChar.properties.writeWithoutResponse) {
+        await writeChar.writeValueWithoutResponse(chunk);
+      } else {
+        await writeChar.writeValue(chunk);
+      }
+    }
+
+    setPrintStatus('Printed successfully!');
+    setTimeout(() => setPrintStatus(null), 2500);
+    return true;
+  };
+
+  const findWritableCharacteristic = async (server: any) => {
+    const services = await server.getPrimaryServices();
+    for (const service of services) {
+      try {
+        const chars = await service.getCharacteristics();
+        for (const c of chars) {
+          if (c.properties.write || c.properties.writeWithoutResponse) {
+            return c;
+          }
+        }
+      } catch {
+        // continue
+      }
+    }
+    return null;
+  };
+
+  // Unified Print Action
+  const handlePrint = async () => {
+    setIsPrinting(true);
+    setPrintStatus('Preparing print...');
+
+    try {
+      const escPosBytes = generateEscPosData();
+
+      // 1. Android APK native Bluetooth SPP direct printing
+      const androidPrinter = (window as any).AndroidPrinter;
+      if (androidPrinter && typeof androidPrinter.printBluetoothThermal === 'function') {
+        setPrintStatus('Printing via Bluetooth...');
+        let binary = '';
+        for (let i = 0; i < escPosBytes.length; i++) {
+          binary += String.fromCharCode(escPosBytes[i]);
+        }
+        const base64EscPos = btoa(binary);
+        androidPrinter.printBluetoothThermal(base64EscPos);
+        setIsPrinting(false);
+        setPrintStatus(null);
+        return;
+      }
+
+      // 2. Web Bluetooth on Laptop Chrome
+      if ((navigator as any).bluetooth) {
+        try {
+          const success = await printViaBluetooth();
+          if (success) {
+            setIsPrinting(false);
+            return;
+          }
+        } catch (btErr: any) {
+          console.warn('Bluetooth print skipped or cancelled:', btErr);
+          if (btErr.name === 'NotFoundError') {
+            setIsPrinting(false);
+            setPrintStatus(null);
+            return;
+          }
+        }
+      }
+
+      // 3. Fallback: Browser isolated print dialogue
+      setPrintStatus('Opening print dialogue...');
+      printViaIframe();
+    } catch (err: any) {
+      console.error('Print error:', err);
+      setPrintStatus('Print error: ' + (err.message || 'Unknown error'));
+      setTimeout(() => setPrintStatus(null), 3000);
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
+  const printViaIframe = () => {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) return;
+
+    doc.open();
+    doc.write(getPrintHtml());
+    doc.close();
+
+    iframe.onload = () => {
+      setTimeout(() => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch (e) {
+          console.error('Print iframe error:', e);
+        } finally {
+          setTimeout(() => {
+            if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe);
+            }
+          }, 2000);
+        }
+      }, 300);
+    };
+  };
+
+  // Download PDF
+  const handleDownloadPdf = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      const pdf = await generatePdf();
+      if (!pdf) return;
+      const fileName = `Receipt-${data.orderId.replace('#', '')}.pdf`;
+
+      // If running inside Android APK, save to Android Downloads directory
+      const androidPrinter = (window as any).AndroidPrinter;
+      if (androidPrinter && typeof androidPrinter.savePdfToDownloads === 'function') {
+        const base64Pdf = pdf.output('datauristring').split(',')[1];
+        androidPrinter.savePdfToDownloads(base64Pdf, fileName);
+      } else {
+        pdf.save(fileName);
+      }
+    } catch (err) {
+      console.error('Failed to generate PDF:', err);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 md:p-6 z-[80] overflow-y-auto">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm sm:max-w-md flex flex-col my-auto max-h-[95vh] overflow-hidden border border-gray-100">
@@ -534,7 +567,7 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
           </button>
         </div>
 
-        {/* Status Message (e.g. connecting/printing feedback) */}
+        {/* Status Message */}
         {printStatus && (
           <div className="bg-blue-50 text-blue-700 px-4 py-2 text-xs font-semibold text-center border-b border-blue-100 animate-pulse">
             {printStatus}
@@ -545,7 +578,6 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
         <div className="flex-1 overflow-y-auto p-4 bg-[#e8e6e1] flex flex-col items-center">
           <div className="w-full flex justify-center">
             <div
-              id="receipt-zoom-container"
               style={{
                 transform: 'scale(1.28)',
                 transformOrigin: 'top center',
@@ -553,7 +585,6 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
               }}
             >
               <div
-                ref={receiptRef}
                 className="receipt-container"
                 style={{
                   width: '58mm',
@@ -569,131 +600,131 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
                   boxShadow: '0 4px 15px rgba(0,0,0,0.15)',
                 }}
               >
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1px', marginBottom: '4px' }}>
-              <img
-                src={rrcafeLogo}
-                alt="RR Cafe Logo"
-                style={{ height: '32px', width: '30px', objectFit: 'contain' }}
-              />
-              <div
-                style={{
-                  height: '29.5px',
-                  minWidth: 0,
-                  flex: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <p style={{ fontSize: '12px', fontWeight: 'bold', margin: 0 }}>RR Cafe</p>
-                  <p style={{ fontSize: '7px', fontWeight: 'bold', margin: 0 }}>{data.orderId}</p>
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1px', marginBottom: '4px' }}>
+                  <img
+                    src={rrcafeLogo}
+                    alt="RR Cafe Logo"
+                    style={{ height: '32px', width: '30px', objectFit: 'contain' }}
+                  />
+                  <div
+                    style={{
+                      height: '29.5px',
+                      minWidth: 0,
+                      flex: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <p style={{ fontSize: '12px', fontWeight: 'bold', margin: 0 }}>RR Cafe</p>
+                      <p style={{ fontSize: '7px', fontWeight: 'bold', margin: 0 }}>{data.orderId}</p>
+                    </div>
+                    <p style={{ fontSize: '6.5px', margin: 0, wordWrap: 'break-word', textAlign: 'left' }}>
+                      Victoria Rd, Kulasekharapatnam - 628206<br />Phone no: 9003244241
+                    </p>
+                  </div>
                 </div>
-                <p style={{ fontSize: '6.5px', margin: 0, wordWrap: 'break-word', textAlign: 'left' }}>
-                  Victoria Rd, Kulasekharapatnam - 628206<br />Phone no: 9003244241
-                </p>
+
+                <div style={{ borderTop: '1px dashed #000', margin: '4px 0' }}></div>
+
+                {/* Meta Details */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8px', margin: '2px 0' }}>
+                  <span>{dateStr}</span>
+                  <span>{timeStr}</span>
+                  <span>{orderTypeStr}</span>
+                  <span>{paymentMethodStr}</span>
+                </div>
+
+                <div style={{ borderTop: '1px dashed #000', margin: '4px 0' }}></div>
+
+                {/* Item Table */}
+                <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', margin: '4px 0' }}>
+                  <thead>
+                    <tr>
+                      <th
+                        style={{
+                          width: '45%',
+                          wordWrap: 'break-word',
+                          borderBottom: '1px dashed #000',
+                          padding: '4px 3px',
+                          paddingBottom: '4px',
+                          textAlign: 'left',
+                        }}
+                      >
+                        ITEM
+                      </th>
+                      <th
+                        style={{
+                          width: '30%',
+                          borderBottom: '1px dashed #000',
+                          padding: '4px 3px',
+                          paddingBottom: '4px',
+                          textAlign: 'center',
+                        }}
+                      >
+                        QTY
+                      </th>
+                      <th
+                        style={{
+                          width: '25%',
+                          borderBottom: '1px dashed #000',
+                          padding: '4px 3px',
+                          paddingBottom: '4px',
+                          textAlign: 'right',
+                        }}
+                      >
+                        AMT
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.items.map(item => (
+                      <tr key={item.id}>
+                        <td style={{ width: '45%', wordWrap: 'break-word', padding: '4px 3px', verticalAlign: 'top' }}>
+                          {item.name}
+                        </td>
+                        <td style={{ width: '30%', textAlign: 'left', padding: '4px 3px', verticalAlign: 'top' }}>
+                          {item.quantity}x ₹{item.price}
+                        </td>
+                        <td style={{ width: '25%', textAlign: 'right', padding: '4px 3px', verticalAlign: 'top' }}>
+                          ₹{(item.price * item.quantity).toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                <div style={{ borderTop: '1px dashed #000', margin: '4px 0' }}></div>
+
+                {/* Summary */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                  <span>Items: {data.totalItems}</span>
+                  <span>Subtotal: ₹{data.total.toFixed(2)}</span>
+                </div>
+                {data.packagingFee > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                    <span>Packaging Fee</span>
+                    <span>₹{data.packagingFee.toFixed(2)}</span>
+                  </div>
+                )}
+
+                <div style={{ borderTop: '2px solid #000', margin: '4px 0' }}></div>
+
+                {/* Total */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 'bold', margin: '4px 0' }}>
+                  <span>TOTAL</span>
+                  <span>₹{data.grandTotal.toFixed(2)}</span>
+                </div>
+
+                <div style={{ borderTop: '2px solid #000', margin: '4px 0' }}></div>
+
+                {/* Footer */}
+                <div style={{ textAlign: 'center', fontSize: '11px', marginTop: '6px' }}>
+                  Thank You! Visit us again :)
+                </div>
               </div>
-            </div>
-
-            <div style={{ borderTop: '1px dashed #000', margin: '4px 0' }}></div>
-
-            {/* Meta Details */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8px', margin: '2px 0' }}>
-              <span>{dateStr}</span>
-              <span>{timeStr}</span>
-              <span>{orderTypeStr}</span>
-              <span>{paymentMethodStr}</span>
-            </div>
-
-            <div style={{ borderTop: '1px dashed #000', margin: '4px 0' }}></div>
-
-            {/* Item Table */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', margin: '4px 0' }}>
-              <thead>
-                <tr>
-                  <th
-                    style={{
-                      width: '45%',
-                      wordWrap: 'break-word',
-                      borderBottom: '1px dashed #000',
-                      padding: '4px 3px',
-                      paddingBottom: '4px',
-                      textAlign: 'left',
-                    }}
-                  >
-                    ITEM
-                  </th>
-                  <th
-                    style={{
-                      width: '30%',
-                      borderBottom: '1px dashed #000',
-                      padding: '4px 3px',
-                      paddingBottom: '4px',
-                      textAlign: 'center',
-                    }}
-                  >
-                    QTY
-                  </th>
-                  <th
-                    style={{
-                      width: '25%',
-                      borderBottom: '1px dashed #000',
-                      padding: '4px 3px',
-                      paddingBottom: '4px',
-                      textAlign: 'right',
-                    }}
-                  >
-                    AMT
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.items.map(item => (
-                  <tr key={item.id}>
-                    <td style={{ width: '45%', wordWrap: 'break-word', padding: '4px 3px', verticalAlign: 'top' }}>
-                      {item.name}
-                    </td>
-                    <td style={{ width: '30%', textAlign: 'left', padding: '4px 3px', verticalAlign: 'top' }}>
-                      {item.quantity}x ₹{item.price}
-                    </td>
-                    <td style={{ width: '25%', textAlign: 'right', padding: '4px 3px', verticalAlign: 'top' }}>
-                      ₹{(item.price * item.quantity).toFixed(2)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <div style={{ borderTop: '1px dashed #000', margin: '4px 0' }}></div>
-
-            {/* Summary */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-              <span>Items: {data.totalItems}</span>
-              <span>Subtotal: ₹{data.total.toFixed(2)}</span>
-            </div>
-            {data.packagingFee > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                <span>Packaging Fee</span>
-                <span>₹{data.packagingFee.toFixed(2)}</span>
-              </div>
-            )}
-
-            <div style={{ borderTop: '2px solid #000', margin: '4px 0' }}></div>
-
-            {/* Total */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 'bold', margin: '4px 0' }}>
-              <span>TOTAL</span>
-              <span>₹{data.grandTotal.toFixed(2)}</span>
-            </div>
-
-            <div style={{ borderTop: '2px solid #000', margin: '4px 0' }}></div>
-
-            {/* Footer */}
-            <div style={{ textAlign: 'center', fontSize: '11px', marginTop: '6px' }}>
-              Thank You! Visit us again :)
-            </div>
-          </div>
             </div>
           </div>
         </div>

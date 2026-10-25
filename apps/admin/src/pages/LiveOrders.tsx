@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { requestNotificationPermission, showNotification } from '../lib/notifications';
 import { supabase } from '../lib/supabase';
+import { CACHE_KEYS, getCached, setCached } from '../lib/offlineCache';
 import { Activity, ChefHat, CheckCircle, Truck, Package } from 'lucide-react';
 
 let cached_orders: any = null;
@@ -18,9 +19,8 @@ interface Order {
   partner?: { name: string; phone_number: string } | null;
 }
 
-let cachedLiveOrders: Order[] = [];
 export default function LiveOrders() {
-  const [orders, setOrders] = useState<Order[]>(cachedLiveOrders);
+  const [orders, setOrders] = useState<Order[]>(() => getCached(CACHE_KEYS.LIVE_ORDERS, []));
 
   useEffect(() => {
     requestNotificationPermission();
@@ -62,8 +62,7 @@ export default function LiveOrders() {
 
     if (!error && data) {
       cached_orders = data;
-        cachedLiveOrders = data;
-        setOrders(data);
+                setOrders(data); setCached(CACHE_KEYS.LIVE_ORDERS, data, 50);
     }
   };
 
@@ -238,3 +237,6 @@ export default function LiveOrders() {
     </div>
   );
 }
+
+
+

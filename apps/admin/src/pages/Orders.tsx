@@ -1,3 +1,4 @@
+import { CACHE_KEYS, getCached, setCached } from '../lib/offlineCache';
 import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -113,7 +114,7 @@ function LiveDeliveryMap({
   );
 }
 
-let cachedOrders: Order[] = [];
+let cachedOrders: Order[] = getCached(CACHE_KEYS.ORDERS_HISTORY, []);
 export default function Orders() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [orders, setOrders] = useState<Order[]>(cachedOrders);
@@ -167,7 +168,7 @@ export default function Orders() {
         customer: d.customer || null,
         partner: d.partner || null,
       }));
-      setOrders(formattedData);
+      setOrders(formattedData); setCached(CACHE_KEYS.ORDERS_HISTORY, formattedData, 100);
       setLoading(false);
       return formattedData;
     }
@@ -524,7 +525,7 @@ export default function Orders() {
             orderId: selectedOrder.order_number ? `#${selectedOrder.order_number}` : `#${getShortOrderId(selectedOrder.id)}`,
             createdAt: selectedOrder.created_at,
             orderType: selectedOrder.order_type,
-            paymentMethod: selectedOrder.payments?.[0]?.payment_method || 'cash',
+            paymentMethod: selectedOrder.payments?.[0]?.payment_method || (selectedOrder.order_type === 'delivery' ? 'upi' : 'cash'),
             items: selectedOrderItems.map(item => ({
               id: item.id,
               name: item.menu_items?.name || 'Item',
@@ -547,5 +548,6 @@ export default function Orders() {
 function BanknoteIcon(props: any) { return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>; }
 function MonitorSmartphoneIcon(props: any) { return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h8"/><path d="M10 19v-3.96 3.15"/><path d="M7 19h5"/><rect width="6" height="10" x="16" y="12" rx="2"/></svg>; }
 function UserIcon(props: any) { return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>; }
+
 
 

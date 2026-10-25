@@ -1,3 +1,4 @@
+import { CACHE_KEYS, getCached, setCached } from '../lib/offlineCache';
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { Calculator, Plus, Minus, Check, Receipt, Trash2, Search, ShoppingBag, Banknote, QrCode, Utensils, X } from 'lucide-react';
@@ -21,7 +22,7 @@ interface PricingConfig {
   packaging_fee_type: 'per_order' | 'per_item';
 }
 
-let cachedBillingItems: MenuItem[] = [];
+let cachedBillingItems: MenuItem[] = getCached(CACHE_KEYS.MENU_ITEMS, []);
 export default function Billing() {
   const [items, setItems] = useState<MenuItem[]>(cachedBillingItems);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -60,7 +61,7 @@ export default function Billing() {
       .order('name');
     if (!error && data) {
       cachedBillingItems = data;
-        setItems(data);
+        setItems(data); setCached(CACHE_KEYS.MENU_ITEMS, data);
     }
   };
 
@@ -511,3 +512,4 @@ export default function Billing() {
     </div>
   );
 }
+

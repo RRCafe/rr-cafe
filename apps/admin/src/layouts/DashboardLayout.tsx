@@ -83,7 +83,10 @@ export default function DashboardLayout() {
       </main>
 
       {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 w-full bg-white border-t border-gray-200 flex items-center justify-around z-40 px-2" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)", height: "calc(4rem + env(safe-area-inset-bottom, 0px))" }}>
+      <nav 
+        className="md:hidden fixed bottom-0 left-0 right-0 w-full bg-white border-t border-gray-200 flex items-center justify-around z-40 px-1" 
+        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)", height: "calc(4rem + env(safe-area-inset-bottom, 0px))" }}
+      >
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
@@ -99,9 +102,15 @@ export default function DashboardLayout() {
             </Link>
           );
         })}
+        {/* Logout button placed on the right like settings tab */}
+        <button
+          onClick={handleSignOut}
+          title="Sign Out"
+          className="flex flex-col items-center justify-center w-full h-full text-red-500 hover:text-red-700 active:scale-90 transition-transform"
+        >
+          <LogOut className="w-6 h-6" />
+        </button>
       </nav>
     </div>
   );
 }
-
-
