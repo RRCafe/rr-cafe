@@ -86,8 +86,14 @@ export function ReceiptModal({ data, onClose }: ReceiptModalProps) {
   const paymentMethodStr = getPaymentMethodDisplay(data.paymentMethod, data.orderType);
   const formattedOrderId = data.orderId.startsWith('#') ? data.orderId : `#${data.orderId}`;
 
-  // Exact HTML and CSS matching receipt.html with zero styling alterations
-  const getPrintHtml = () => {
+  // Detect Android phone or mobile screen to apply mobile-specific scaling without modifying desktop view
+  const isAndroidOrMobile = typeof window !== 'undefined' && (
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+    window.innerWidth < 768
+  );
+
+  // Exact HTML and CSS matching receipt.html with zero styling alterations on desktop
+  const getPrintHtml = (isMobile = isAndroidOrMobile) => {
     const itemsHtml = data.items
       .map(
         item => `
@@ -184,13 +190,36 @@ body {
   margin: 0;
 }
 .address-box {
-  font-size: 5.8px;
+  font-size: 6.5px;
   margin: 0;
   word-wrap: break-word;
   text-align: left;
   white-space: nowrap;
-  letter-spacing: -0.2px;
 }
+${isMobile ? `
+.address-box {
+  transform: scale(0.80);
+  transform-origin: left center;
+  width: 125%;
+}
+.meta-details {
+  font-size: 7.5px;
+  margin: 2px 0;
+  line-height: 1.3;
+  transform: scale(0.92);
+  transform-origin: left center;
+  width: 108%;
+}
+.meta-details span {
+  white-space: nowrap;
+}
+` : `
+.meta-details {
+  font-size: 8px;
+  margin: 2px 0;
+  line-height: 1.3;
+}
+`}
 .divider {
   border-top: 1px dashed #000;
   margin: 4px 0;
@@ -212,14 +241,6 @@ body {
 .meta-details, .summary-row, .total-row {
   display: flex;
   justify-content: space-between;
-}
-.meta-details {
-  font-size: 7.5px;
-  margin: 2px 0;
-  line-height: 1.3;
-}
-.meta-details span {
-  white-space: nowrap;
 }
 .summary-row {
   margin-bottom: 2px;
@@ -474,10 +495,10 @@ body {
       gray[i] = 0.299 * r + 0.587 * g + 0.114 * b;
     }
 
-    // High-contrast binary thresholding: threshold = 210 ensures that fine text strokes and anti-aliased font edges
-    // are converted to solid, dark, bold black thermal dots rather than being lost/thinned out, giving high-contrast print quality
+    // High-contrast, clean binary thresholding: threshold = 175 ensures sharp, refined letterforms
+    // without stroke swelling or bloated letter loops, perfectly matching true POS typography
     const binary = new Uint8Array(targetWidth * targetHeight);
-    const threshold = 210;
+    const threshold = 175;
     for (let i = 0; i < targetWidth * targetHeight; i++) {
       binary[i] = gray[i] < threshold ? 1 : 0; // 1 = black thermal dot, 0 = white paper
     }
@@ -488,6 +509,8 @@ body {
 
     // ESC @ - Initialize printer
     bytes.push(0x1B, 0x40);
+    // ESC 7 - Set print density & heating parameters for deep, dark, ultra-crisp thermal print
+    bytes.push(0x1B, 0x37, 0x07, 0x50, 0x02);
     // ESC 3 0 - Zero line spacing
     bytes.push(0x1B, 0x33, 0x00);
 
