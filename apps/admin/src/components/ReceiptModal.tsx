@@ -192,10 +192,20 @@ body {
 .divider {
   border-top: 1px dashed #000;
   margin: 4px 0;
+  height: 0;
+  min-height: 0;
+  line-height: 0;
+  font-size: 0;
+  overflow: hidden;
 }
 .divider-solid {
   border-top: 2px solid #000;
   margin: 4px 0;
+  height: 0;
+  min-height: 0;
+  line-height: 0;
+  font-size: 0;
+  overflow: hidden;
 }
 .meta-details, .summary-row, .total-row {
   display: flex;
@@ -204,19 +214,23 @@ body {
 .meta-details {
   font-size: 8px;
   margin: 2px 0;
+  line-height: 1.3;
 }
 .summary-row {
   margin-bottom: 2px;
+  line-height: 1.3;
 }
 .item-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   table-layout: fixed;
   margin: 4px 0;
 }
 .item-table th, .item-table td {
   padding: 4px 3px;
   vertical-align: top;
+  line-height: 1.25;
 }
 .item-table th {
   border-bottom: 1px dashed #000;
@@ -239,6 +253,7 @@ body {
   font-size: 14px;
   font-weight: bold;
   margin: 4px 0;
+  line-height: 1.3;
 }
 .footer {
   text-align: center;
@@ -343,6 +358,22 @@ body {
     const doc = iframe.contentDocument || iframe.contentWindow?.document;
     if (!doc) throw new Error('Receipt document not ready');
 
+    // Ensure top-level document has loaded Courier New fonts for html2canvas FontMetrics
+    if (document.fonts) {
+      try {
+        await Promise.all([
+          document.fonts.load("10px 'Courier New'"),
+          document.fonts.load("bold 12px 'Courier New'"),
+          document.fonts.load("bold 14px 'Courier New'"),
+          document.fonts.load("8px 'Courier New'"),
+          document.fonts.load("6.5px 'Courier New'"),
+        ]);
+        await document.fonts.ready;
+      } catch {
+        // ignore
+      }
+    }
+
     if (doc.fonts) {
       try {
         await doc.fonts.ready;
@@ -375,6 +406,12 @@ body {
         allowTaint: true,
         backgroundColor: '#ffffff',
         logging: false,
+        onclone: (clonedDoc) => {
+          const clonedContainer = clonedDoc.querySelector('.receipt-container') as HTMLElement;
+          if (clonedContainer) {
+            clonedContainer.style.boxShadow = 'none';
+          }
+        },
       });
 
       return canvas;

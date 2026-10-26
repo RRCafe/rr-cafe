@@ -1,5 +1,19 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'Courier New';
+  src: url('/fonts/cour.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Courier New';
+  src: url('/fonts/courbd.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+}
+
 @theme {
   --color-blue-50: #F3EFEA;
   --color-blue-100: #E6DED6;

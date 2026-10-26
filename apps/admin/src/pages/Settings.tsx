@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Save, Settings as SettingsIcon, LogOut } from 'lucide-react';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { CustomDropdown } from '../components/CustomDropdown';
 
 interface PricingConfig {
   id: string;
@@ -98,15 +99,15 @@ export default function Settings() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Calculation Method</label>
-              <select
+              <CustomDropdown
+                label="Calculation Method"
                 value={config.packaging_fee_type}
-                onChange={e => setConfig({ ...config, packaging_fee_type: e.target.value as 'per_order' | 'per_item' })}
-                className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="per_order">For each order</option>
-                <option value="per_item">For each item</option>
-              </select>
+                onChange={val => setConfig({ ...config, packaging_fee_type: val as 'per_order' | 'per_item' })}
+                options={[
+                  { value: 'per_order', label: 'For each order' },
+                  { value: 'per_item', label: 'For each item' },
+                ]}
+              />
             </div>
           </div>
           <p className="text-xs text-gray-500">Applied to takeaway orders during billing.</p>
@@ -160,15 +161,15 @@ export default function Settings() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Platform Fee Type</label>
-              <select
+              <CustomDropdown
+                label="Platform Fee Type"
                 value={config.platform_fee_type}
-                onChange={e => setConfig({ ...config, platform_fee_type: e.target.value as 'flat' | 'percentage' })}
-                className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="flat">Flat Amount</option>
-                <option value="percentage">Percentage</option>
-              </select>
+                onChange={val => setConfig({ ...config, platform_fee_type: val as 'flat' | 'percentage' })}
+                options={[
+                  { value: 'flat', label: 'Flat Amount' },
+                  { value: 'percentage', label: 'Percentage' },
+                ]}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">

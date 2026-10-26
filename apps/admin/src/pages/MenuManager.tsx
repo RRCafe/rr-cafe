@@ -1,7 +1,8 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { UtensilsCrossed, Plus, Trash2, X, Image as ImageIcon, Pencil, Check, Search, ChevronDown } from 'lucide-react';
+import { UtensilsCrossed, Plus, Trash2, X, Image as ImageIcon, Pencil, Check, Search } from 'lucide-react';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { CustomDropdown } from '../components/CustomDropdown';
 
 let cached_items: any = null;
 
@@ -39,9 +40,6 @@ export default function MenuManager() {
   const [editingPriceValue, setEditingPriceValue] = useState<string>('');
   const [confirmDelete, setConfirmDelete] = useState<{ id: string, imageUrl: string | null } | null>(null);
 
-  // Custom Dropdown state
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (cached_items) {
@@ -51,13 +49,7 @@ export default function MenuManager() {
       fetchItems();
     }
 
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+
   }, []);
 
   const fetchItems = async () => {
@@ -413,35 +405,12 @@ export default function MenuManager() {
               </div>
 
               {/* Custom Smooth Dropdown for Business Type */}
-              <div className="relative" ref={dropdownRef}>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Business Type</label>
-                <button
-                  type="button"
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl flex items-center justify-between focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
-                >
-                  <span className="capitalize font-medium text-gray-800">{newItemBusiness}</span>
-                  <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-                
-                {isDropdownOpen && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-xl shadow-xl shadow-gray-200/50 overflow-hidden z-50 py-1">
-                    {BUSINESS_TYPES.map(type => (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => {
-                          setNewItemBusiness(type);
-                          setIsDropdownOpen(false);
-                        }}
-                        className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors hover:bg-gray-50 ${newItemBusiness === type ? 'text-blue-600 bg-blue-50/50' : 'text-gray-700'}`}
-                      >
-                        <span className="capitalize">{type}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <CustomDropdown
+                label="Business Type"
+                value={newItemBusiness}
+                onChange={setNewItemBusiness}
+                options={BUSINESS_TYPES.map(type => ({ value: type, label: type }))}
+              />
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Image (Optional)</label>

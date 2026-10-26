@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { BarChart2, TrendingUp, ShoppingBag, Star, ArrowLeft, Calendar, Package, DollarSign, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { CustomDropdown } from '../components/CustomDropdown';
 
 interface OrderItem {
   quantity: number;
@@ -37,6 +38,21 @@ const SOURCE_LABELS: Record<string, string> = {
   zomato: 'Zomato',
   swiggy: 'Swiggy',
 };
+
+const ORDER_TYPE_OPTIONS: { value: OrderTypeFilter; label: string }[] = [
+  { value: 'all', label: 'All Order Types' },
+  { value: 'dine_in', label: 'Dine In' },
+  { value: 'dine_out', label: 'Takeaway' },
+  { value: 'delivery', label: 'Delivery' },
+];
+
+const SOURCE_OPTIONS: { value: SourceFilter; label: string }[] = [
+  { value: 'all', label: 'All Sources' },
+  { value: 'app', label: 'App' },
+  { value: 'pos_manual', label: 'POS' },
+  { value: 'zomato', label: 'Zomato' },
+  { value: 'swiggy', label: 'Swiggy' },
+];
 
 function getDateRangeFilter(range: DateRange, customStart: string, customEnd: string): { start: Date; end: Date } {
   const now = new Date();
@@ -231,21 +247,20 @@ export default function OrderReport() {
             ))}
           </div>
           <div className="flex gap-2 mt-2">
-            <select value={orderTypeFilter} onChange={e => setOrderTypeFilter(e.target.value as OrderTypeFilter)}
-              className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none">
-              <option value="all">All Types</option>
-              <option value="dine_in">Dine In</option>
-              <option value="dine_out">Takeaway</option>
-              <option value="delivery">Delivery</option>
-            </select>
-            <select value={sourceFilter} onChange={e => setSourceFilter(e.target.value as SourceFilter)}
-              className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none">
-              <option value="all">All Sources</option>
-              <option value="app">App</option>
-              <option value="pos_manual">POS</option>
-              <option value="zomato">Zomato</option>
-              <option value="swiggy">Swiggy</option>
-            </select>
+            <CustomDropdown
+              value={orderTypeFilter}
+              onChange={val => setOrderTypeFilter(val as OrderTypeFilter)}
+              options={ORDER_TYPE_OPTIONS}
+              size="sm"
+              className="flex-1 min-w-0"
+            />
+            <CustomDropdown
+              value={sourceFilter}
+              onChange={val => setSourceFilter(val as SourceFilter)}
+              options={SOURCE_OPTIONS}
+              size="sm"
+              className="flex-1 min-w-0"
+            />
           </div>
           {dateRange === 'custom' && (
             <div className="flex gap-2 mt-2">
@@ -293,29 +308,22 @@ export default function OrderReport() {
           )}
 
           {/* Order Type Filter */}
-          <select
+          <CustomDropdown
             value={orderTypeFilter}
-            onChange={e => setOrderTypeFilter(e.target.value as OrderTypeFilter)}
-            className="border border-gray-200 rounded-xl px-3 py-1.5 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-          >
-            <option value="all">All Order Types</option>
-            <option value="dine_in">Dine In</option>
-            <option value="dine_out">Takeaway</option>
-            <option value="delivery">Delivery</option>
-          </select>
+            onChange={val => setOrderTypeFilter(val as OrderTypeFilter)}
+            options={ORDER_TYPE_OPTIONS}
+            size="sm"
+            className="w-44"
+          />
 
           {/* Source Filter */}
-          <select
+          <CustomDropdown
             value={sourceFilter}
-            onChange={e => setSourceFilter(e.target.value as SourceFilter)}
-            className="border border-gray-200 rounded-xl px-3 py-1.5 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-          >
-            <option value="all">All Sources</option>
-            <option value="app">App</option>
-            <option value="pos_manual">POS</option>
-            <option value="zomato">Zomato</option>
-            <option value="swiggy">Swiggy</option>
-          </select>
+            onChange={val => setSourceFilter(val as SourceFilter)}
+            options={SOURCE_OPTIONS}
+            size="sm"
+            className="w-40"
+          />
         </div>
       </div>
 
