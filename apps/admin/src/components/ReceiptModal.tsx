@@ -3,7 +3,7 @@ import { X, Printer, Download, CheckCircle2, Loader2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { toCanvas } from 'html-to-image';
-import rrcafeLogo from '../assets/rrcafe-logo.png';
+import receiptLogo from '../assets/receipt_logo.png';
 
 export interface ReceiptItem {
   id: string;
@@ -108,13 +108,13 @@ export function ReceiptModal({ data, onClose }: ReceiptModalProps) {
 <style>
 @font-face {
   font-family: 'Courier New';
-  src: url('/fonts/cour.ttf') format('truetype');
+  src: url('/admin/fonts/cour.ttf') format('truetype'), url('./fonts/cour.ttf') format('truetype'), url('/fonts/cour.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
 }
 @font-face {
   font-family: 'Courier New';
-  src: url('/fonts/courbd.ttf') format('truetype');
+  src: url('/admin/fonts/courbd.ttf') format('truetype'), url('./fonts/courbd.ttf') format('truetype'), url('/fonts/courbd.ttf') format('truetype');
   font-weight: bold;
   font-style: normal;
 }
@@ -184,11 +184,12 @@ body {
   margin: 0;
 }
 .address-box {
-  font-size: 6.5px;
+  font-size: 5.8px;
   margin: 0;
   word-wrap: break-word;
   text-align: left;
   white-space: nowrap;
+  letter-spacing: -0.2px;
 }
 .divider {
   border-top: 1px dashed #000;
@@ -213,9 +214,12 @@ body {
   justify-content: space-between;
 }
 .meta-details {
-  font-size: 8px;
+  font-size: 7.5px;
   margin: 2px 0;
   line-height: 1.3;
+}
+.meta-details span {
+  white-space: nowrap;
 }
 .summary-row {
   margin-bottom: 2px;
@@ -286,7 +290,7 @@ body {
 <body>
     <div class="receipt-container">
         <div class="header">
-            <img src="${rrcafeLogo}" alt="RR Cafe Logo">
+            <img src="${receiptLogo}" alt="RR Cafe Logo">
             <div class="title-box">
                 <div class="header-text">
                     <p class="cafe-name">RR Cafe</p>
@@ -452,6 +456,8 @@ body {
 
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, targetWidth, targetHeight);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(sourceCanvas, 0, 0, targetWidth, targetHeight);
 
     const imgData = ctx.getImageData(0, 0, targetWidth, targetHeight);
@@ -468,9 +474,10 @@ body {
       gray[i] = 0.299 * r + 0.587 * g + 0.114 * b;
     }
 
-    // Clean binary thresholding for solid, dark, razor-sharp text and lines (no scattered dots)
+    // High-contrast binary thresholding: threshold = 210 ensures that fine text strokes and anti-aliased font edges
+    // are converted to solid, dark, bold black thermal dots rather than being lost/thinned out, giving high-contrast print quality
     const binary = new Uint8Array(targetWidth * targetHeight);
-    const threshold = 195; // Anything darker than light gray is solid black
+    const threshold = 210;
     for (let i = 0; i < targetWidth * targetHeight; i++) {
       binary[i] = gray[i] < threshold ? 1 : 0; // 1 = black thermal dot, 0 = white paper
     }
