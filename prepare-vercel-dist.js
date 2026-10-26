@@ -7,6 +7,9 @@ fs.mkdirSync('dist/delivery', { recursive: true });
 fs.cpSync('apps/customer/dist', 'dist', { recursive: true });
 fs.cpSync('apps/admin/dist', 'dist/admin', { recursive: true });
 fs.cpSync('apps/delivery/dist', 'dist/delivery', { recursive: true });
+if (fs.existsSync('apps/admin/public/fonts')) {
+  fs.cpSync('apps/admin/public/fonts', 'dist/fonts', { recursive: true });
+}
 console.log('? Assembled dist for Vercel deployment');
 
 fs.writeFileSync('dist/serve.json', JSON.stringify({

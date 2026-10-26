@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { X, Printer, Download, CheckCircle2, Loader2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -77,57 +77,24 @@ export function ReceiptModal({ data, onClose }: ReceiptModalProps) {
   const [isPrinting, setIsPrinting] = useState(false);
   const [printStatus, setPrintStatus] = useState<string | null>(null);
 
-  const previewContainerRef = useRef<HTMLDivElement>(null);
-  const receiptRef = useRef<HTMLDivElement>(null);
-  const [previewLayout, setPreviewLayout] = useState<{
-    scale: number;
-    width: number;
-    height: number;
-  }>({ scale: 1.25, width: 274, height: 450 });
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const dateStr = formatReceiptDate(data.createdAt);
   const timeStr = formatReceiptTime(data.createdAt);
   const orderTypeStr = getOrderTypeDisplay(data.orderType);
   const paymentMethodStr = getPaymentMethodDisplay(data.paymentMethod, data.orderType);
+  const formattedOrderId = data.orderId.startsWith('#') ? data.orderId : `#${data.orderId}`;
 
-  useEffect(() => {
-    const updateLayout = () => {
-      if (!receiptRef.current || !previewContainerRef.current) return;
-      const containerW = previewContainerRef.current.clientWidth || 320;
-      const naturalW = receiptRef.current.offsetWidth || 219;
-      const naturalH = receiptRef.current.offsetHeight || 400;
-
-      // Fit ~82% of container width, clamped between 1.0 and 1.3
-      const targetW = containerW * 0.82;
-      const calculatedScale = Math.min(1.3, Math.max(1.0, targetW / naturalW));
-
-      setPreviewLayout({
-        scale: calculatedScale,
-        width: Math.round(naturalW * calculatedScale),
-        height: Math.round(naturalH * calculatedScale),
-      });
-    };
-
-    updateLayout();
-    const timer = setTimeout(updateLayout, 100);
-    window.addEventListener('resize', updateLayout);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('resize', updateLayout);
-    };
-  }, [data]);
-
-  // Exact HTML and CSS from user's receipt.html
+  // Exact HTML and CSS matching receipt.html with zero styling alterations
   const getPrintHtml = () => {
     const itemsHtml = data.items
       .map(
         item => `
-      <tr>
-        <td class="col-item">${item.name}</td>
-        <td class="col-qty">${item.quantity}x ₹${item.price}</td>
-        <td class="col-amt">₹${(item.price * item.quantity).toFixed(2)}</td>
-      </tr>
-    `
+                <tr>
+                    <td class="col-item">${item.name}</td>
+                    <td class="col-qty">${item.quantity}x ₹${item.price}</td>
+                    <td class="col-amt">₹${(item.price * item.quantity).toFixed(2)}</td>
+                </tr>`
       )
       .join('');
 
@@ -138,34 +105,153 @@ export function ReceiptModal({ data, onClose }: ReceiptModalProps) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RR Cafe Receipt</title>
 <style>
-* { box-sizing: border-box; }
-body{margin:0;padding:20px;display:flex;justify-content:center;background-color:#e0e0e0;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
-.receipt-container{width:58mm;max-width:58mm;background:#fff;padding:4mm;font-family:'Courier New',Courier,monospace;font-size:10px;color:#000;line-height:1.25}
-.header{display:flex;align-items:flex-start;gap:4px;margin-bottom:4px}
-.header img{height:32px; width:32px; object-fit:contain; flex-shrink:0;}
-.title-box{flex:1;min-width:0;}
-.header-text{display:flex;justify-content:space-between;align-items:baseline}
-.cafe-name{font-size:13px;font-weight:bold;margin:0;line-height:1.2}
-.order-id{font-size:8px;font-weight:bold;margin:0;line-height:1.2}
-.address-box{font-size:7.5px;margin:2px 0 0 0;word-break:break-word;text-align:left;line-height:1.25}
-.meta-details{border-top:1px dashed #000;border-bottom:1px dashed #000;padding:3px 0;margin:4px 0;display:flex;justify-content:space-between;font-size:8px}
-.item-table{width:100%;border-collapse:collapse;table-layout:fixed;margin:4px 0}
-.item-table th,.item-table td{padding:3px 2px;vertical-align:top;font-size:9px}
-.item-table th{border-bottom:1px dashed #000;text-align:left}
-.col-item{width:45%;word-break:break-word}
-.col-qty{width:30%;text-align:left}
-.col-amt{width:25%;text-align:right}
-.summary-section{border-top:1px dashed #000;padding-top:4px;margin-top:4px;font-size:9px}
-.summary-row{display:flex;justify-content:space-between;margin-bottom:2px}
-.total-row{border-top:2px solid #000;border-bottom:2px solid #000;padding:4px 0;margin:4px 0;display:flex;justify-content:space-between;font-size:14px;font-weight:bold}
-.footer{text-align:center;font-size:11px;margin-top:6px}
+@font-face {
+  font-family: 'Courier New';
+  src: url('/fonts/cour.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Courier New';
+  src: url('/fonts/courbd.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+}
+* {
+  box-sizing: border-box;
+}
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+  background-color: #e0e0e0;
+}
+body {
+  padding: 20px 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overflow-y: auto;
+}
+.receipt-container {
+  width: 58mm;
+  max-width: 58mm;
+  background: #fff;
+  padding: 4mm;
+  box-sizing: border-box;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 10px;
+  color: #000;
+  line-height: 1.2;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+}
+.header {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  margin-bottom: 4px;
+}
+.header img {
+  height: 32px;
+  width: 30px;
+  object-fit: contain;
+}
+.title-box {
+  height: 29.5px;
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.header-text {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.cafe-name {
+  font-size: 12px;
+  font-weight: bold;
+  margin: 0;
+}
+.order-id {
+  font-size: 7px;
+  font-weight: bold;
+  margin: 0;
+}
+.address-box {
+  font-size: 6.5px;
+  margin: 0;
+  word-wrap: break-word;
+  text-align: left;
+  white-space: nowrap;
+}
+.divider {
+  border-top: 1px dashed #000;
+  margin: 4px 0;
+}
+.divider-solid {
+  border-top: 2px solid #000;
+  margin: 4px 0;
+}
+.meta-details, .summary-row, .total-row {
+  display: flex;
+  justify-content: space-between;
+}
+.meta-details {
+  font-size: 8px;
+  margin: 2px 0;
+}
+.summary-row {
+  margin-bottom: 2px;
+}
+.item-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin: 4px 0;
+}
+.item-table th, .item-table td {
+  padding: 4px 3px;
+  vertical-align: top;
+}
+.item-table th {
+  border-bottom: 1px dashed #000;
+  padding-bottom: 4px;
+  text-align: left;
+}
+.col-item {
+  width: 45%;
+  word-wrap: break-word;
+}
+.col-qty {
+  width: 30%;
+  text-align: left;
+}
+.col-amt {
+  width: 25%;
+  text-align: right;
+}
+.total-row {
+  font-size: 14px;
+  font-weight: bold;
+  margin: 4px 0;
+}
+.footer {
+  text-align: center;
+  font-size: 11px;
+  margin-top: 6px;
+}
 
 @page {
   size: 58mm auto;
   margin: 0;
 }
 @media print {
-  body {
+  html, body {
     margin: 0 !important;
     padding: 0 !important;
     background: transparent !important;
@@ -188,12 +274,13 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
             <div class="title-box">
                 <div class="header-text">
                     <p class="cafe-name">RR Cafe</p>
-                    <p class="order-id">${data.orderId}</p>
+                    <p class="order-id">${formattedOrderId}</p>
                 </div>
                 <p class="address-box">Victoria Rd, Kulasekharapatnam - 628206<br>Phone no: 9003244241</p>
             </div>
         </div>
 
+        <div class="divider"></div>
         <div class="meta-details">
             <span>${dateStr}</span>
             <span>${timeStr}</span>
@@ -201,6 +288,7 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
             <span>${paymentMethodStr}</span>
         </div>
 
+        <div class="divider"></div>
         <table class="item-table">
             <thead>
                 <tr>
@@ -215,27 +303,28 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
             </tbody>
         </table>
 
-        <div class="summary-section">
-            <div class="summary-row">
-                <span>Items: ${data.totalItems}</span>
-                <span>Subtotal: ₹${data.total.toFixed(2)}</span>
-            </div>
-            ${
-              data.packagingFee > 0
-                ? `
-            <div class="summary-row">
-                <span>Packaging Fee</span>
-                <span>₹${data.packagingFee.toFixed(2)}</span>
-            </div>`
-                : ''
-            }
+        <div class="divider"></div>
+        <div class="summary-row">
+            <span>Items: ${data.totalItems}</span>
+            <span>Subtotal: ₹${data.total.toFixed(2)}</span>
         </div>
+        ${
+          data.packagingFee > 0
+            ? `
+        <div class="summary-row">
+            <span>Packaging Fee</span>
+            <span>₹${data.packagingFee.toFixed(2)}</span>
+        </div>`
+            : ''
+        }
 
+        <div class="divider-solid"></div>
         <div class="total-row">
             <span>TOTAL</span>
             <span>₹${data.grandTotal.toFixed(2)}</span>
         </div>
 
+        <div class="divider-solid"></div>
         <div class="footer">
             Thank You! Visit us again :)
         </div>
@@ -244,63 +333,60 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
 </html>`;
   };
 
-  // Capture un-transformed receipt element to high-res canvas (scale: 3 for 300+ DPI)
+  const receiptHtml = getPrintHtml();
+
+  // Capture isolated receipt container from the iframe directly to high-res canvas
   const captureReceiptCanvas = async (): Promise<HTMLCanvasElement> => {
-    if (!receiptRef.current) throw new Error('Receipt preview element not ready');
+    const iframe = iframeRef.current;
+    if (!iframe) throw new Error('Receipt preview frame not ready');
 
-    const staging = document.createElement('div');
-    staging.style.position = 'fixed';
-    staging.style.left = '-9999px';
-    staging.style.top = '0';
-    staging.style.width = '58mm';
-    staging.style.backgroundColor = '#ffffff';
-    staging.style.zIndex = '-9999';
-    staging.style.pointerEvents = 'none';
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) throw new Error('Receipt document not ready');
 
-    const clone = receiptRef.current.cloneNode(true) as HTMLElement;
-    clone.style.transform = 'none';
-    clone.style.margin = '0';
-    clone.style.boxShadow = 'none';
-    clone.style.width = '58mm';
-    clone.style.maxWidth = '58mm';
-    clone.style.minWidth = '58mm';
+    if (doc.fonts) {
+      try {
+        await doc.fonts.ready;
+      } catch {
+        // ignore
+      }
+    }
 
-    staging.appendChild(clone);
-    document.body.appendChild(staging);
+    const receiptEl = doc.querySelector('.receipt-container') as HTMLElement;
+    if (!receiptEl) throw new Error('Receipt container element not found');
+
+    const img = receiptEl.querySelector('img');
+    if (img && !img.complete) {
+      await new Promise(res => {
+        img.onload = res;
+        img.onerror = res;
+      });
+    }
+
+    // Reset scroll to top before capture to avoid clipping
+    const prevDocScroll = doc.documentElement.scrollTop;
+    const prevBodyScroll = doc.body.scrollTop;
+    doc.documentElement.scrollTop = 0;
+    doc.body.scrollTop = 0;
 
     try {
-      if (document.fonts) {
-        await document.fonts.ready;
-      }
-      const img = clone.querySelector('img');
-      if (img && !img.complete) {
-        await new Promise(res => {
-          img.onload = res;
-          img.onerror = res;
-        });
-      }
-
-      const canvas = await html2canvas(clone, {
+      const canvas = await html2canvas(receiptEl, {
         scale: 3, // Razor-sharp 300+ DPI
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
         logging: false,
-        windowWidth: 384,
       });
 
       return canvas;
     } finally {
-      if (document.body.contains(staging)) {
-        document.body.removeChild(staging);
-      }
+      doc.documentElement.scrollTop = prevDocScroll;
+      doc.body.scrollTop = prevBodyScroll;
     }
   };
 
   // Convert canvas to standard ESC/POS raster bitmap for 58mm thermal printers (384 dots width)
   const canvasToEscPosRaster = (sourceCanvas: HTMLCanvasElement): Uint8Array => {
     const targetWidth = 384; // Standard 58mm thermal printer dot width (48 bytes per line)
-    const widthBytes = targetWidth / 8; // 48 bytes
     const scale = targetWidth / sourceCanvas.width;
     const targetHeight = Math.round(sourceCanvas.height * scale);
 
@@ -348,23 +434,24 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
       const linesInSlice = Math.min(sliceHeight, targetHeight - yStart);
 
       // GS v 0 0 xL xH yL yH
-      bytes.push(
-        0x1D, 0x76, 0x30, 0x00,
-        widthBytes & 0xFF, (widthBytes >> 8) & 0xFF,
-        linesInSlice & 0xFF, (linesInSlice >> 8) & 0xFF
-      );
+      const xL = 48; // 384 / 8 = 48 bytes
+      const xH = 0;
+      const yL = linesInSlice & 0xFF;
+      const yH = (linesInSlice >> 8) & 0xFF;
+
+      bytes.push(0x1D, 0x76, 0x30, 0x00, xL, xH, yL, yH);
 
       for (let y = 0; y < linesInSlice; y++) {
-        const currentY = yStart + y;
-        for (let bx = 0; bx < widthBytes; bx++) {
-          let byteVal = 0;
-          for (let bit = 0; bit < 8; bit++) {
-            const x = bx * 8 + bit;
-            if (binary[currentY * targetWidth + x] === 1) {
-              byteVal |= (0x80 >> bit);
+        const row = yStart + y;
+        for (let x = 0; x < 384; x += 8) {
+          let byte = 0;
+          for (let b = 0; b < 8; b++) {
+            const pixelIdx = row * 384 + (x + b);
+            if (binary[pixelIdx] === 1) {
+              byte |= (0x80 >> b);
             }
           }
-          bytes.push(byteVal);
+          bytes.push(byte);
         }
       }
     }
@@ -504,7 +591,7 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
         }
       }
 
-      // 3. Fallback: Browser isolated print dialogue
+      // 3. Fallback: Browser print dialogue
       setPrintStatus('Opening print dialogue...');
       printViaIframe();
     } catch (err: any) {
@@ -517,6 +604,16 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
   };
 
   const printViaIframe = () => {
+    if (iframeRef.current?.contentWindow) {
+      try {
+        iframeRef.current.contentWindow.focus();
+        iframeRef.current.contentWindow.print();
+        return;
+      } catch (err) {
+        console.warn('Direct iframe print failed, falling back to temp frame:', err);
+      }
+    }
+
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
     iframe.style.right = '0';
@@ -601,8 +698,7 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
           </div>
           <button
             onClick={onClose}
-            className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors text-gray-500 hover:text-gray-800"
-            title="Close"
+            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -615,153 +711,15 @@ body{margin:0;padding:20px;display:flex;justify-content:center;background-color:
           </div>
         )}
 
-        {/* Receipt Preview Area - Scaled responsively to fit 80% of popup without modifying 58mm base size */}
-        <div ref={previewContainerRef} className="flex-1 overflow-y-auto p-4 bg-[#e8e6e1] flex flex-col items-center">
-          <div className="w-full flex justify-center py-2">
-            <div
-              style={{
-                width: `${previewLayout.width}px`,
-                height: `${previewLayout.height}px`,
-                position: 'relative',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.15)',
-                backgroundColor: '#ffffff',
-              }}
-            >
-              <div
-                style={{
-                  width: '58mm',
-                  transform: `scale(${previewLayout.scale})`,
-                  transformOrigin: 'top left',
-                }}
-              >
-                <div
-                  ref={receiptRef}
-                  className="receipt-container"
-                  style={{
-                    width: '58mm',
-                    minWidth: '58mm',
-                    maxWidth: '58mm',
-                    backgroundColor: '#ffffff',
-                    padding: '4mm',
-                    boxSizing: 'border-box',
-                    fontFamily: "'Courier New', Courier, monospace",
-                    fontSize: '10px',
-                    color: '#000',
-                    lineHeight: 1.25,
-                    WebkitTextSizeAdjust: '100%',
-                  }}
-                >
-                  {/* Header */}
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px', marginBottom: '4px' }}>
-                    <img
-                      src={rrcafeLogo}
-                      alt="RR Cafe Logo"
-                      style={{ height: '32px', width: '32px', objectFit: 'contain', flexShrink: 0 }}
-                    />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                        <p style={{ fontSize: '13px', fontWeight: 'bold', margin: 0, lineHeight: 1.2 }}>RR Cafe</p>
-                        <p style={{ fontSize: '8px', fontWeight: 'bold', margin: 0, lineHeight: 1.2 }}>{data.orderId}</p>
-                      </div>
-                      <p style={{ fontSize: '7.5px', margin: '2px 0 0 0', wordBreak: 'break-word', textAlign: 'left', lineHeight: 1.25 }}>
-                        Victoria Rd, Kulasekharapatnam - 628206<br />Phone no: 9003244241
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Meta Details */}
-                  <div style={{ borderTop: '1px dashed #000', borderBottom: '1px dashed #000', padding: '3px 0', margin: '4px 0', display: 'flex', justifyContent: 'space-between', fontSize: '8px' }}>
-                    <span>{dateStr}</span>
-                    <span>{timeStr}</span>
-                    <span>{orderTypeStr}</span>
-                    <span>{paymentMethodStr}</span>
-                  </div>
-
-                  {/* Item Table */}
-                  <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', margin: '4px 0' }}>
-                    <thead>
-                      <tr>
-                        <th
-                          style={{
-                            width: '45%',
-                            wordBreak: 'break-word',
-                            borderBottom: '1px dashed #000',
-                            padding: '3px 2px',
-                            textAlign: 'left',
-                            fontSize: '9px',
-                          }}
-                        >
-                          ITEM
-                        </th>
-                        <th
-                          style={{
-                            width: '30%',
-                            borderBottom: '1px dashed #000',
-                            padding: '3px 2px',
-                            textAlign: 'center',
-                            fontSize: '9px',
-                          }}
-                        >
-                          QTY
-                        </th>
-                        <th
-                          style={{
-                            width: '25%',
-                            borderBottom: '1px dashed #000',
-                            padding: '3px 2px',
-                            textAlign: 'right',
-                            fontSize: '9px',
-                          }}
-                        >
-                          AMT
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.items.map(item => (
-                        <tr key={item.id}>
-                          <td style={{ width: '45%', wordBreak: 'break-word', padding: '3px 2px', verticalAlign: 'top', fontSize: '9px' }}>
-                            {item.name}
-                          </td>
-                          <td style={{ width: '30%', textAlign: 'left', padding: '3px 2px', verticalAlign: 'top', fontSize: '9px' }}>
-                            {item.quantity}x ₹{item.price}
-                          </td>
-                          <td style={{ width: '25%', textAlign: 'right', padding: '3px 2px', verticalAlign: 'top', fontSize: '9px' }}>
-                            ₹{(item.price * item.quantity).toFixed(2)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-
-                  {/* Summary */}
-                  <div style={{ borderTop: '1px dashed #000', paddingTop: '4px', marginTop: '4px', fontSize: '9px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                      <span>Items: {data.totalItems}</span>
-                      <span>Subtotal: ₹{data.total.toFixed(2)}</span>
-                    </div>
-                    {data.packagingFee > 0 && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                        <span>Packaging Fee</span>
-                        <span>₹{data.packagingFee.toFixed(2)}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Total */}
-                  <div style={{ borderTop: '2px solid #000', borderBottom: '2px solid #000', padding: '4px 0', margin: '4px 0', display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 'bold' }}>
-                    <span>TOTAL</span>
-                    <span>₹{data.grandTotal.toFixed(2)}</span>
-                  </div>
-
-                  {/* Footer */}
-                  <div style={{ textAlign: 'center', fontSize: '11px', marginTop: '6px' }}>
-                    Thank You! Visit us again :)
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+        {/* Receipt Preview Area - Isolated iframe rendering exact receipt.html with zero outer pollution */}
+        <div className="flex-1 overflow-hidden bg-[#e0e0e0] flex justify-center items-stretch min-h-[440px] relative">
+          <iframe
+            ref={iframeRef}
+            srcDoc={receiptHtml}
+            title="Receipt Preview"
+            className="w-full h-full border-none block"
+            style={{ width: '100%', height: '100%', minHeight: '440px', border: 'none' }}
+          />
         </div>
 
         {/* Action Buttons */}

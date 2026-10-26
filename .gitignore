@@ -19,3 +19,4 @@ patch*.js
 fix*.py
 test*.py
 patch*.py
+*.apk
