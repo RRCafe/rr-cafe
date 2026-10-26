@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { X, Printer, Download, CheckCircle2, Loader2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { toCanvas } from 'html-to-image';
 import rrcafeLogo from '../assets/rrcafe-logo.png';
 
 export interface ReceiptItem {
@@ -358,22 +359,6 @@ body {
     const doc = iframe.contentDocument || iframe.contentWindow?.document;
     if (!doc) throw new Error('Receipt document not ready');
 
-    // Ensure top-level document has loaded Courier New fonts for html2canvas FontMetrics
-    if (document.fonts) {
-      try {
-        await Promise.all([
-          document.fonts.load("10px 'Courier New'"),
-          document.fonts.load("bold 12px 'Courier New'"),
-          document.fonts.load("bold 14px 'Courier New'"),
-          document.fonts.load("8px 'Courier New'"),
-          document.fonts.load("6.5px 'Courier New'"),
-        ]);
-        await document.fonts.ready;
-      } catch {
-        // ignore
-      }
-    }
-
     if (doc.fonts) {
       try {
         await doc.fonts.ready;
@@ -386,11 +371,28 @@ body {
     if (!receiptEl) throw new Error('Receipt container element not found');
 
     const img = receiptEl.querySelector('img');
-    if (img && !img.complete) {
-      await new Promise(res => {
-        img.onload = res;
-        img.onerror = res;
-      });
+    if (img) {
+      if (!img.complete) {
+        await new Promise(res => {
+          img.onload = res;
+          img.onerror = res;
+        });
+      }
+      // Inline the logo as a base64 data URI to prevent any CORS/tainting during SVG rasterization
+      if (img.naturalWidth && !img.src.startsWith('data:')) {
+        try {
+          const c = document.createElement('canvas');
+          c.width = img.naturalWidth;
+          c.height = img.naturalHeight;
+          const ctx = c.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0);
+            img.src = c.toDataURL('image/png');
+          }
+        } catch (e) {
+          console.warn('Could not inline logo to data URL:', e);
+        }
+      }
     }
 
     // Reset scroll to top before capture to avoid clipping
@@ -400,21 +402,36 @@ body {
     doc.body.scrollTop = 0;
 
     try {
-      const canvas = await html2canvas(receiptEl, {
-        scale: 3, // Razor-sharp 300+ DPI
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        onclone: (clonedDoc) => {
-          const clonedContainer = clonedDoc.querySelector('.receipt-container') as HTMLElement;
-          if (clonedContainer) {
-            clonedContainer.style.boxShadow = 'none';
-          }
-        },
-      });
-
-      return canvas;
+      // Primary: Native browser engine rasterization via html-to-image (SVG foreignObject)
+      // This produces 100% pixel-perfect layout and exact font metrics matching the screen preview
+      try {
+        const canvas = await toCanvas(receiptEl, {
+          pixelRatio: 3, // Razor-sharp 300+ DPI
+          backgroundColor: '#ffffff',
+          style: {
+            boxShadow: 'none',
+            margin: '0',
+          },
+          skipFonts: true, // Use system Courier New font directly
+        });
+        return canvas;
+      } catch (engineErr) {
+        console.warn('Native engine capture failed, falling back to html2canvas:', engineErr);
+        const canvas = await html2canvas(receiptEl, {
+          scale: 3,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+          onclone: (clonedDoc) => {
+            const clonedContainer = clonedDoc.querySelector('.receipt-container') as HTMLElement;
+            if (clonedContainer) {
+              clonedContainer.style.boxShadow = 'none';
+            }
+          },
+        });
+        return canvas;
+      }
     } finally {
       doc.documentElement.scrollTop = prevDocScroll;
       doc.body.scrollTop = prevBodyScroll;
